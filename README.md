@@ -15,6 +15,33 @@ No multi-tenant SaaS. No tracking. No subscription fees. Just a loud bird doing 
 └────────────────────────────────────────────┘
 ```
 
+## Under the hood / Dashboard
+
+You do not have to live in raw JSON. The local dashboard is the control surface — stock connectors, check key status, pick GA4 properties, tune prompts, and read the brief. Secrets stay in `.env`; preferences write to `rooster.config.json`.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <p><strong>Latest brief</strong> — action-first digest with urgent callouts, site tables, and a short Do Today list.</p>
+      <img src="./public/screenshots/latest-brief.webp" alt="Latest brief dashboard with Attention Today callouts, GA4 tables, and Do Today list" />
+    </td>
+    <td width="50%" valign="top">
+      <p><strong>Connector outcomes</strong> — what each source actually returned before the LLM synthesized it.</p>
+      <img src="./public/screenshots/connector-outcomes.webp" alt="Connector outcomes for Calendar, IMAP, and Google Analytics" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <p><strong>Settings / keys</strong> — ready vs missing env status (never the values) and a GA4 property picker.</p>
+      <img src="./public/screenshots/settings-keys.webp" alt="Settings page showing key readiness and GA4 property checkboxes" />
+    </td>
+    <td width="50%" valign="top">
+      <p><strong>Preferences</strong> — LLM provider/model, delivery channel, timezone, cron hint, and briefing prompts.</p>
+      <img src="./public/screenshots/preferences.webp" alt="Preferences form for LLM, delivery, timezone, and prompts" />
+    </td>
+  </tr>
+</table>
+
 ## Tier 0 — hatch a demo brief (no keys)
 
 ```bash
