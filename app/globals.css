@@ -41,9 +41,108 @@ body {
 /* Brief prose stays scannable; metrics/logs use mono via utility classes. */
 .brief-prose {
   font-family: var(--font-sans), ui-sans-serif, sans-serif;
-  white-space: pre-wrap;
   line-height: 1.55;
   letter-spacing: 0.01em;
+}
+
+.brief-prose > :first-child {
+  margin-top: 0;
+}
+
+.brief-prose > :last-child {
+  margin-bottom: 0;
+}
+
+.brief-prose h3 {
+  margin: 1.25em 0 0.4em;
+  font-size: 1.05em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--foreground);
+}
+
+.brief-prose h4 {
+  margin: 1em 0 0.35em;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.brief-prose p {
+  margin: 0.65em 0;
+}
+
+.brief-prose ul,
+.brief-prose ol {
+  margin: 0.65em 0;
+  padding-left: 1.25em;
+}
+
+.brief-prose ul {
+  list-style: disc;
+}
+
+.brief-prose ol {
+  list-style: decimal;
+}
+
+.brief-prose li {
+  margin: 0.25em 0;
+}
+
+.brief-prose li + li {
+  margin-top: 0.2em;
+}
+
+.brief-prose hr {
+  margin: 1.1em 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.brief-prose strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.brief-prose .brief-urgent {
+  margin: 0.85em 0;
+  padding: 0.65em 0.85em;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.brief-prose .brief-table-wrap {
+  margin: 0.85em 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.brief-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.brief-prose th,
+.brief-prose td {
+  padding: 0.4em 0.65em;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.brief-prose th {
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-raised);
+}
+
+.brief-prose td {
+  font-variant-numeric: tabular-nums;
 }
 
 .metric-mono {

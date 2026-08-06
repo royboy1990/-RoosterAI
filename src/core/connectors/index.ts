@@ -20,3 +20,10 @@ export const connectors: readonly Connector[] = [
 export function getConnector(id: string): Connector | undefined {
   return connectors.find((c) => c.id === id);
 }
+
+export {
+  listAccessibleGa4Properties,
+  parseGa4PropertyIdsFromEnv,
+  type Ga4PropertyInfo,
+} from "./ga4";
+export { connectorCatalog, type ConnectorCatalogEntry } from "./catalog";

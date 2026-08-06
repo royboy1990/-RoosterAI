@@ -7,8 +7,8 @@ import {
   removeConnector,
   setConnectorMuted,
   wakeTheFlock,
-  type ActionResult,
 } from "@/app/actions";
+import type { ActionResult } from "@/app/_lib/action-result";
 import { copy } from "@/src/copy";
 import type { ProviderState } from "@/src/core/registry";
 

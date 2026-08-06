@@ -4,11 +4,41 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
+import { connectorCatalog } from "./connectors/catalog";
+import {
+  anthropicProvider,
+  geminiProvider,
+  openaiCompatibleProvider,
+  stubProvider,
+} from "./llm";
+import {
+  PROMPT_HISTORY_MAX,
+  PROMPT_MAX_CHARS,
+  type PromptHistoryEntry,
+} from "./prompts";
+
+export { PROMPT_HISTORY_MAX, PROMPT_MAX_CHARS };
+export type { PromptHistoryEntry };
 
 const connectorEntrySchema = z.object({
   id: z.string().min(1),
   enabled: z.boolean().default(true),
   config: z.record(z.string(), z.unknown()).default({}),
+});
+
+const promptHistoryEntrySchema = z.object({
+  id: z.string().min(1),
+  savedAt: z.string().min(1),
+  system: z.string().max(PROMPT_MAX_CHARS),
+  overview: z.string().max(PROMPT_MAX_CHARS),
+});
+
+const promptsSchema = z.object({
+  /** Empty / omitted → pipeline falls back to copy.briefSystemPrompt. */
+  system: z.string().max(PROMPT_MAX_CHARS).optional(),
+  /** Operator guidance for what the morning overview should emphasize. */
+  overview: z.string().max(PROMPT_MAX_CHARS).default(""),
+  history: z.array(promptHistoryEntrySchema).max(PROMPT_HISTORY_MAX).default([]),
 });
 
 const roosterConfigSchema = z.object({
@@ -29,10 +59,13 @@ const roosterConfigSchema = z.object({
     channel: z.string().min(1),
   }),
   scheduleHint: z.string().optional(),
+  prompts: promptsSchema.default({ overview: "", history: [] }),
 });
 
 export type RoosterConfig = z.infer<typeof roosterConfigSchema>;
 export type ConnectorEntry = z.infer<typeof connectorEntrySchema>;
+
+export type ConfigSource = "file" | "demo" | "defaults";
 
 export interface LoadedConfig {
   config: RoosterConfig;
@@ -40,6 +73,13 @@ export interface LoadedConfig {
   rootDir: string;
   /** Snapshot of process.env after dotenv load. */
   env: NodeJS.ProcessEnv;
+  /** Where the effective config came from — drives banners and honesty logs. */
+  source: ConfigSource;
+}
+
+function envIsSet(name: string, env: NodeJS.ProcessEnv): boolean {
+  const value = env[name];
+  return value !== undefined && value.trim() !== "";
 }
 
 function findRootDir(startDir: string = process.cwd()): string {
@@ -82,7 +122,86 @@ export function hasRoosterConfig(rootDir: string = resolveRootDir()): boolean {
 }
 
 /**
+ * Auto-detect connectors + LLM from env when no config file exists.
+ * Delivery stays `file` — never auto-send. Demo connector is fallback only
+ * (it has empty requiredEnv and would otherwise always qualify).
+ */
+export function buildDefaultConfig(env: NodeJS.ProcessEnv): RoosterConfig {
+  const detected = connectorCatalog
+    .filter((connector) => connector.id !== "demo")
+    .filter((connector) => {
+      if (!connector.requiredEnv.every((name) => envIsSet(name, env))) {
+        return false;
+      }
+      // GA4 needs an explicit property selection (picker or GA4_PROPERTY_ID)
+      // before it is useful in a defaults run.
+      if (connector.id === "ga4" && !envIsSet("GA4_PROPERTY_ID", env)) {
+        return false;
+      }
+      return true;
+    })
+    .map((connector) => {
+      if (connector.id === "ga4") {
+        const properties = env.GA4_PROPERTY_ID
+          ? env.GA4_PROPERTY_ID.split(/[,:\s]+/)
+              .map((part) => part.trim().replace(/^properties\//, ""))
+              .filter(Boolean)
+              .map((id) => ({ id, name: "" }))
+          : [];
+        return {
+          id: connector.id,
+          enabled: true,
+          config: { properties },
+        };
+      }
+      return {
+        id: connector.id,
+        enabled: true,
+        config: {},
+      };
+    });
+
+  const useDemo = detected.length === 0;
+  const connectorEntries = useDemo
+    ? [{ id: "demo", enabled: true, config: {} }]
+    : detected;
+
+  let llm: RoosterConfig["llm"];
+  if (envIsSet("OPENAI_API_KEY", env)) {
+    llm = {
+      provider: openaiCompatibleProvider.id,
+      model: openaiCompatibleProvider.defaultModel,
+    };
+  } else if (envIsSet("GEMINI_API_KEY", env)) {
+    llm = {
+      provider: geminiProvider.id,
+      model: geminiProvider.defaultModel,
+    };
+  } else if (envIsSet("ANTHROPIC_API_KEY", env)) {
+    llm = {
+      provider: anthropicProvider.id,
+      model: anthropicProvider.defaultModel,
+    };
+  } else {
+    llm = {
+      provider: stubProvider.id,
+      model: stubProvider.defaultModel,
+    };
+  }
+
+  return roosterConfigSchema.parse({
+    demo: useDemo,
+    timezone: "UTC",
+    connectors: connectorEntries,
+    llm,
+    delivery: { channel: "file" },
+    scheduleHint: "0 7 * * *",
+  });
+}
+
+/**
  * Loads + zod-validates rooster config and resolves env from `.env`.
+ * Missing local config is a valid defaults state — malformed files still throw.
  * Demo mode is a config preset path — not a pipeline branch.
  */
 export async function loadConfig(options: LoadConfigOptions = {}): Promise<LoadedConfig> {
@@ -94,10 +213,19 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Loade
     : roosterConfigPath(rootDir);
 
   if (!existsSync(configPath)) {
-    const hint = options.demo
-      ? "rooster.config.demo.json is missing from the repo."
-      : "Stock sources in /coop, copy rooster.config.example.json, or run with --demo.";
-    throw new Error(`Config not found at ${configPath}. ${hint}`);
+    if (options.demo) {
+      throw new Error(
+        `Config not found at ${configPath}. rooster.config.demo.json is missing from the repo.`,
+      );
+    }
+
+    const config = buildDefaultConfig(process.env);
+    return {
+      config,
+      rootDir,
+      env: process.env,
+      source: "defaults",
+    };
   }
 
   let raw: unknown;
@@ -125,6 +253,7 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Loade
     config,
     rootDir,
     env: process.env,
+    source: options.demo ? "demo" : "file",
   };
 }
 

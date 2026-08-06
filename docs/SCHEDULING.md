@@ -14,35 +14,24 @@ Use an absolute `npm` path if cron's `PATH` is thin. Demo-only cron is rarely us
 
 ## 2. GitHub Actions
 
-Schedule a workflow that checks out the repo, installs, and runs `npm run wake`. Store secrets in repo Settings → Secrets (IMAP, OpenAI, Telegram, etc.). Commit a non-secret `rooster.config.json` via the Actions checkout only if you're comfortable with it in the repo, or generate it in the workflow from a secret blob.
+Starter workflow: [`.github/workflows/wake.yml`](../.github/workflows/wake.yml).
 
-Example sketch:
+1. Fill `.env` locally as usual.
+2. Generate env mappings from what you actually set (unset keys are omitted):
 
-```yaml
-name: Wake the Flock Up
-on:
-  schedule:
-    - cron: "0 0 * * *" # 00:00 UTC — adjust for your timezone
-  workflow_dispatch:
-jobs:
-  wake:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-      - run: npm ci
-      - run: npm run wake
-        env:
-          IMAP_HOST: ${{ secrets.IMAP_HOST }}
-          IMAP_USER: ${{ secrets.IMAP_USER }}
-          IMAP_PASS: ${{ secrets.IMAP_PASS }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+```bash
+npm run generate:wake-workflow
 ```
+
+3. Add the printed secret names under repo **Settings → Secrets and variables → Actions**.
+4. Commit `.github/workflows/wake.yml` (and optionally a non-secret `rooster.config.json`, or set `ROOSTER_CONFIG_JSON`).
+5. **Actions → Wake the Flock Up → Run workflow**, or wait for the schedule (UTC — edit the cron).
+
+`ROOSTER_RUN_TOKEN` is not used here — Actions runs `npm run wake` directly.
+
+**GitHub connector gotcha:** store the PAT as secret `ROOSTER_GITHUB_TOKEN` (not `GITHUB_TOKEN`); the generator maps it to `GITHUB_TOKEN` in the job env.
+
+**GA4:** when `GOOGLE_APPLICATION_CREDENTIALS` is set locally, the generator adds a step that writes `ga4-service-account.json` from secret `GA4_SERVICE_ACCOUNT_JSON` (paste the full JSON file contents).
 
 Persist `data/briefs/` across runs only if you need history (artifact upload or a remote store). For Telegram-only delivery, file history is optional.
 

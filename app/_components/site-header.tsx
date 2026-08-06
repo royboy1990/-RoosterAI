@@ -6,7 +6,7 @@ import {
   coopStatusLabel,
   formatHeaderTime,
 } from "@/app/_lib/format";
-import { WakeButton } from "@/app/_components/wake-button";
+import { WakeButton } from "@/app/_components/wake-provider";
 
 export function SiteHeader({
   status,
@@ -22,15 +22,15 @@ export function SiteHeader({
   return (
     <header className="border-b border-border bg-surface">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-baseline gap-3">
+        <div className="min-w-0 flex flex-col gap-2">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-3">
             <Link
               href="/"
               className="text-lg font-semibold tracking-tight text-accent"
             >
               {copy.brand}
             </Link>
-            <p className="metric-mono text-xs text-muted">
+            <p className="metric-mono min-w-0 text-xs text-muted">
               [{time}] · {copy.coopStatus.label}:{" "}
               <span
                 className={`inline-block rounded border px-1.5 py-0.5 text-[11px] font-medium ${coopStatusClass(status)}`}
@@ -39,7 +39,7 @@ export function SiteHeader({
               </span>
             </p>
           </div>
-          <nav className="flex gap-4 text-sm text-muted">
+          <nav className="flex min-w-0 flex-wrap gap-4 text-sm text-muted">
             <Link href="/" className="hover:text-foreground">
               {copy.nav.latest}
             </Link>
@@ -54,7 +54,7 @@ export function SiteHeader({
             </Link>
           </nav>
         </div>
-        <div className="sm:min-w-[220px]">
+        <div className="min-w-0 sm:min-w-[220px]">
           <WakeButton />
         </div>
       </div>

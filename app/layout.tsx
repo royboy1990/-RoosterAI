@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteHeader } from "@/app/_components/site-header";
+import { TimezoneBootstrap } from "@/app/_components/timezone-bootstrap";
+import {
+  WakeProvider,
+  WakeResultBanner,
+} from "@/app/_components/wake-provider";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { readLatestBrief } from "@/src/core/store";
 import "./globals.css";
@@ -29,14 +34,8 @@ export default async function RootLayout({
 }>) {
   const rootDir = resolveRootDir();
   const latest = await readLatestBrief(rootDir);
-
-  let timezone = "UTC";
-  try {
-    const loaded = await loadConfig({ rootDir });
-    timezone = loaded.config.timezone;
-  } catch {
-    // Config may be missing on first clone — header still renders.
-  }
+  const loaded = await loadConfig({ rootDir });
+  const timezone = loaded.config.timezone;
 
   return (
     <html
@@ -44,14 +43,18 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <SiteHeader
-          status={latest?.status ?? null}
-          timezone={timezone}
-          now={new Date()}
-        />
-        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-8">
-          {children}
-        </div>
+        <WakeProvider>
+          <TimezoneBootstrap timezone={timezone} />
+          <SiteHeader
+            status={latest?.status ?? null}
+            timezone={timezone}
+            now={new Date()}
+          />
+          <WakeResultBanner />
+          <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-1 flex-col px-6 py-8">
+            {children}
+          </div>
+        </WakeProvider>
       </body>
     </html>
   );

@@ -176,7 +176,7 @@ async function gatherConnectors(
  * No demo / dry-run branches — behavior comes from config + registries.
  */
 export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
-  const { config, rootDir } = loaded;
+  const { config, rootDir, source } = loaded;
   const now = new Date();
   const runAbort = new AbortController();
 
@@ -193,6 +193,11 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     now,
     log,
   };
+
+  if (source === "defaults") {
+    const ids = config.connectors.map((entry) => entry.id).join(", ") || "none";
+    log(`no rooster.config.json — running auto-detected defaults (${ids})`);
+  }
 
   log(`${copy.pendingGather}`);
   const outcomes = await gatherConnectors(loaded, ctx);
@@ -233,11 +238,17 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     log(`LLM skipped (${llmError}); delivering raw digest`);
   } else {
     log(copy.pendingLlm);
+    const system =
+      config.prompts.system?.trim() || copy.briefSystemPrompt;
+    const overview = config.prompts.overview.trim();
+    const user = overview
+      ? `${overview}\n\n---\n\n${digest}`
+      : digest;
     try {
       text = await llm.complete(
         {
-          system: copy.briefSystemPrompt,
-          user: digest,
+          system,
+          user,
           model: config.llm.model,
         },
         ctx,

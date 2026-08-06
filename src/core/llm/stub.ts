@@ -10,6 +10,7 @@ export const stubProvider: LlmProvider = {
   description: "Formats a readable brief without calling an API.",
   tags: ["dev"],
   setupDocs: "README.md",
+  defaultModel: "stub",
   requiredEnv: [],
   async complete(
     input: LlmCompleteInput,

@@ -37,9 +37,16 @@ rooster.config.json
 # runtime data (briefs, logs)
 /data/
 
+# Local agent instruction files (IDE may regenerate; keep out of the public tree)
+AGENTS.md
+CLAUDE.md
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ga4 service account
+*ga4-service-account.json

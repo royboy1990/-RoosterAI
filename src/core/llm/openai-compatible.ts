@@ -18,6 +18,7 @@ export const openaiCompatibleProvider: LlmProvider = {
     "OpenAI, Groq, OpenRouter, Ollama, or LM Studio via chat completions.",
   tags: ["llm"],
   setupDocs: ".env.example",
+  defaultModel: "gpt-5.6-terra",
   optionalEnv: ["OPENAI_BASE_URL"],
   requiredEnv: ["OPENAI_API_KEY"],
   async complete(

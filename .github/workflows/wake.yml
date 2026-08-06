@@ -1,0 +1,71 @@
+# Starter GitHub Actions workflow for unattended morning briefs.
+# Customize env from your local .env:
+#   npm run generate:wake-workflow
+# That keeps only secrets you already filled — unset keys are omitted.
+# Docs: docs/SCHEDULING.md
+
+name: Wake the Flock Up
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # UTC — match rooster.config.json timezone
+  workflow_dispatch:
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Write rooster.config.json (optional)
+        env:
+          ROOSTER_CONFIG_JSON: ${{ secrets.ROOSTER_CONFIG_JSON }}
+        run: |
+          if [ -n "$ROOSTER_CONFIG_JSON" ]; then
+            printf '%s\n' "$ROOSTER_CONFIG_JSON" > rooster.config.json
+          elif [ -f rooster.config.json ]; then
+            echo "Using committed rooster.config.json"
+          else
+            echo "No rooster.config.json — wake will use env defaults (see docs/SCHEDULING.md)"
+          fi
+
+      # Uncomment after adding GA4_SERVICE_ACCOUNT_JSON in repo secrets
+      # (or run: npm run generate:wake-workflow — it adds this when GOOGLE_APPLICATION_CREDENTIALS is set):
+      # - name: Write GA4 service account
+      #   env:
+      #     GA4_SERVICE_ACCOUNT_JSON: ${{ secrets.GA4_SERVICE_ACCOUNT_JSON }}
+      #   run: |
+      #     if [ -z "$GA4_SERVICE_ACCOUNT_JSON" ]; then
+      #       echo "GA4_SERVICE_ACCOUNT_JSON secret is missing"
+      #       exit 1
+      #     fi
+      #     printf '%s\n' "$GA4_SERVICE_ACCOUNT_JSON" > ga4-service-account.json
+
+      - name: Wake the Flock Up
+        run: npm run wake
+        # Prefer generating mappings from .env (only set keys; unset ones omitted):
+        #   npm run generate:wake-workflow
+        #
+        # Or add env manually, e.g.:
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.ROOSTER_GITHUB_TOKEN }}  # not the built-in Actions token
+        #   CALENDAR_ICS_URL: ${{ secrets.CALENDAR_ICS_URL }}
+        #   IMAP_HOST: ${{ secrets.IMAP_HOST }}
+        #   IMAP_PORT: ${{ secrets.IMAP_PORT }}
+        #   IMAP_USER: ${{ secrets.IMAP_USER }}
+        #   IMAP_PASS: ${{ secrets.IMAP_PASS }}
+        #   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        #   OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+        #   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        #   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        #   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        #   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        #   GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+        #   GOOGLE_APPLICATION_CREDENTIALS: ./ga4-service-account.json

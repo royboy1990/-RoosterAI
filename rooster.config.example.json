@@ -24,10 +24,14 @@
   ],
   "llm": {
     "provider": "openai-compatible",
-    "model": "gpt-4.1-mini"
+    "model": "gpt-5.6-terra"
   },
   "delivery": {
     "channel": "file"
   },
-  "scheduleHint": "0 7 * * *"
+  "scheduleHint": "0 7 * * *",
+  "prompts": {
+    "overview": "",
+    "history": []
+  }
 }

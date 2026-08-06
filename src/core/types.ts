@@ -49,6 +49,8 @@ export interface LlmCompleteInput {
 export interface LlmProvider extends ProviderMeta {
   id: string;
   label: string;
+  /** Model id applied when this provider is auto-selected or first chosen. */
+  defaultModel: string;
   requiredEnv: readonly string[];
   complete(input: LlmCompleteInput, ctx: RunContext): Promise<string>;
 }

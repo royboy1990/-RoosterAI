@@ -8,9 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "wake": "tsx src/core/run.ts"
+    "wake": "tsx src/core/run.ts",
+    "generate:wake-workflow": "tsx scripts/generate-wake-workflow.ts"
   },
   "dependencies": {
+    "@google-analytics/admin": "^9.2.0",
     "@google-analytics/data": "^7.0.0",
     "dotenv": "^17.4.2",
     "imapflow": "^1.6.5",

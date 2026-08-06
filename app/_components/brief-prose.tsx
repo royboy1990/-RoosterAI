@@ -1,0 +1,260 @@
+import type { ReactNode } from "react";
+
+/**
+ * Small safe markdown → React renderer for LLM brief text.
+ * Supports ### / ####, **bold**, ul/ol, ---, !!! urgent, tables, paragraphs.
+ * Escapes via JSX text — never interprets raw HTML from the model.
+ */
+
+type InlinePart = string | { bold: string };
+
+type Block =
+  | { type: "h3" | "h4"; parts: InlinePart[] }
+  | { type: "hr" }
+  | { type: "urgent"; parts: InlinePart[] }
+  | { type: "ul" | "ol"; items: InlinePart[][] }
+  | { type: "table"; headers: InlinePart[][]; rows: InlinePart[][][] }
+  | { type: "p"; parts: InlinePart[] };
+
+function parseInlines(text: string): InlinePart[] {
+  const parts: InlinePart[] = [];
+  const re = /\*\*(.+?)\*\*/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > last) {
+      parts.push(text.slice(last, match.index));
+    }
+    parts.push({ bold: match[1]! });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) {
+    parts.push(text.slice(last));
+  }
+  return parts.length > 0 ? parts : [""];
+}
+
+function renderInlines(parts: InlinePart[]): ReactNode[] {
+  return parts.map((part, i) =>
+    typeof part === "string" ? (
+      <span key={i}>{part}</span>
+    ) : (
+      <strong key={i}>{part.bold}</strong>
+    ),
+  );
+}
+
+function splitTableCells(line: string): string[] {
+  const trimmed = line.trim();
+  const withoutEdges = trimmed
+    .replace(/^\|/, "")
+    .replace(/\|$/, "");
+  return withoutEdges.split("|").map((cell) => cell.trim());
+}
+
+function isTableRow(line: string): boolean {
+  const trimmed = line.trim();
+  // Require a leading pipe so prose like "A | B" is not treated as a table.
+  return trimmed.startsWith("|") && trimmed.includes("|", 1);
+}
+
+function isTableSeparator(line: string): boolean {
+  if (!isTableRow(line)) {
+    return false;
+  }
+  const cells = splitTableCells(line);
+  return (
+    cells.length > 0 && cells.every((cell) => /^:?-{1,}:?$/.test(cell))
+  );
+}
+
+function isBlockBoundary(line: string): boolean {
+  const next = line.trim();
+  return (
+    next === "" ||
+    next === "---" ||
+    next === "***" ||
+    next === "___" ||
+    /^#{3,4}\s+/.test(next) ||
+    /^!!!\s+/.test(next) ||
+    /^[-*]\s+/.test(next) ||
+    /^\d+\.\s+/.test(next) ||
+    isTableRow(next)
+  );
+}
+
+function parseBlocks(text: string): Block[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const blocks: Block[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const trimmed = lines[i]!.trim();
+
+    if (trimmed === "") {
+      i += 1;
+      continue;
+    }
+
+    if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
+      blocks.push({ type: "hr" });
+      i += 1;
+      continue;
+    }
+
+    const urgent = trimmed.match(/^!!!\s+(.+)$/);
+    if (urgent) {
+      blocks.push({ type: "urgent", parts: parseInlines(urgent[1]!) });
+      i += 1;
+      continue;
+    }
+
+    const h4 = trimmed.match(/^####\s+(.+)$/);
+    if (h4) {
+      blocks.push({ type: "h4", parts: parseInlines(h4[1]!) });
+      i += 1;
+      continue;
+    }
+
+    const h3 = trimmed.match(/^###\s+(.+)$/);
+    if (h3) {
+      blocks.push({ type: "h3", parts: parseInlines(h3[1]!) });
+      i += 1;
+      continue;
+    }
+
+    if (
+      isTableRow(trimmed) &&
+      i + 1 < lines.length &&
+      isTableSeparator(lines[i + 1]!.trim())
+    ) {
+      const headers = splitTableCells(trimmed).map(parseInlines);
+      i += 2;
+      const rows: InlinePart[][][] = [];
+      while (i < lines.length && isTableRow(lines[i]!.trim())) {
+        if (isTableSeparator(lines[i]!.trim())) {
+          i += 1;
+          continue;
+        }
+        rows.push(splitTableCells(lines[i]!.trim()).map(parseInlines));
+        i += 1;
+      }
+      blocks.push({ type: "table", headers, rows });
+      continue;
+    }
+
+    const ulMatch = trimmed.match(/^[-*]\s+(.+)$/);
+    if (ulMatch) {
+      const items: InlinePart[][] = [];
+      while (i < lines.length) {
+        const itemMatch = lines[i]!.trim().match(/^[-*]\s+(.+)$/);
+        if (!itemMatch) {
+          break;
+        }
+        items.push(parseInlines(itemMatch[1]!));
+        i += 1;
+      }
+      blocks.push({ type: "ul", items });
+      continue;
+    }
+
+    const olMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+    if (olMatch) {
+      const items: InlinePart[][] = [];
+      while (i < lines.length) {
+        const itemMatch = lines[i]!.trim().match(/^\d+\.\s+(.+)$/);
+        if (!itemMatch) {
+          break;
+        }
+        items.push(parseInlines(itemMatch[1]!));
+        i += 1;
+      }
+      blocks.push({ type: "ol", items });
+      continue;
+    }
+
+    const paraLines: string[] = [];
+    while (i < lines.length) {
+      const next = lines[i]!.trim();
+      if (paraLines.length > 0 && isBlockBoundary(next)) {
+        break;
+      }
+      if (next === "") {
+        break;
+      }
+      paraLines.push(next);
+      i += 1;
+    }
+    if (paraLines.length > 0) {
+      blocks.push({ type: "p", parts: parseInlines(paraLines.join(" ")) });
+    }
+  }
+
+  return blocks;
+}
+
+export function BriefProse({ text }: { text: string }) {
+  const blocks = parseBlocks(text);
+
+  return (
+    <>
+      {blocks.map((block, i) => {
+        switch (block.type) {
+          case "h3":
+            return <h3 key={i}>{renderInlines(block.parts)}</h3>;
+          case "h4":
+            return <h4 key={i}>{renderInlines(block.parts)}</h4>;
+          case "hr":
+            return <hr key={i} />;
+          case "urgent":
+            return (
+              <p key={i} className="brief-urgent" role="status">
+                {renderInlines(block.parts)}
+              </p>
+            );
+          case "ul":
+            return (
+              <ul key={i}>
+                {block.items.map((item, j) => (
+                  <li key={j}>{renderInlines(item)}</li>
+                ))}
+              </ul>
+            );
+          case "ol":
+            return (
+              <ol key={i}>
+                {block.items.map((item, j) => (
+                  <li key={j}>{renderInlines(item)}</li>
+                ))}
+              </ol>
+            );
+          case "table":
+            return (
+              <div key={i} className="brief-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      {block.headers.map((cell, j) => (
+                        <th key={j}>{renderInlines(cell)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {block.rows.map((row, r) => (
+                      <tr key={r}>
+                        {row.map((cell, c) => (
+                          <td key={c}>{renderInlines(cell)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          case "p":
+            return <p key={i}>{renderInlines(block.parts)}</p>;
+        }
+      })}
+    </>
+  );
+}

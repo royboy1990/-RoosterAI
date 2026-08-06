@@ -14,6 +14,7 @@ export const anthropicProvider: LlmProvider = {
   description: "Anthropic Messages API for the morning brief summary.",
   tags: ["llm"],
   setupDocs: ".env.example",
+  defaultModel: "claude-sonnet-4.5",
   requiredEnv: ["ANTHROPIC_API_KEY"],
   async complete(
     input: LlmCompleteInput,
