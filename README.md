@@ -60,10 +60,10 @@ Primary action everywhere: **Wake the Flock Up** (`npm run wake`).
 
 | Tier | What you add | Command |
 |------|----------------|---------|
-| **0** | Nothing | `npm run wake -- --demo` |
-| **1** | GitHub + Calendar + one LLM key | copy `.env` + config, then `npm run wake` |
-| **2** | Telegram | brief hits your phone |
-| **3** | IMAP, GA4, your connectors | stock more from `/coop` |
+| **0** 🥚 | Nothing (demo) | `npm run wake -- --demo` |
+| **1** 🐣 | GitHub + Calendar + one LLM key | copy `.env` + config, then `npm run wake` |
+| **2** 🐥 | Telegram | brief hits your phone |
+| **3** 🐓 | IMAP, GA4, your connectors | stock more from `/coop` |
 
 ### Tier 1 — GitHub + Calendar + one LLM key
 
