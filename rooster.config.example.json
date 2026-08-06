@@ -1,0 +1,36 @@
+{
+  "demo": false,
+  "timezone": "UTC",
+  "connectorTimeoutMs": 30000,
+  "perConnectorCharBudget": 4000,
+  "connectors": [
+    {
+      "id": "imap",
+      "enabled": true,
+      "config": {
+        "mailbox": "INBOX",
+        "maxMessages": 15
+      }
+    },
+    {
+      "id": "ga4",
+      "enabled": false,
+      "config": {
+        "topPagesLimit": 5
+      }
+    },
+    {
+      "id": "demo",
+      "enabled": false,
+      "config": {}
+    }
+  ],
+  "llm": {
+    "provider": "openai-compatible",
+    "model": "gpt-4.1-mini"
+  },
+  "delivery": {
+    "channel": "file"
+  },
+  "scheduleHint": "0 7 * * *"
+}

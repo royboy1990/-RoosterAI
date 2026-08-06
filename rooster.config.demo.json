@@ -1,0 +1,21 @@
+{
+  "demo": true,
+  "timezone": "UTC",
+  "connectorTimeoutMs": 30000,
+  "perConnectorCharBudget": 4000,
+  "connectors": [
+    {
+      "id": "demo",
+      "enabled": true,
+      "config": {}
+    }
+  ],
+  "llm": {
+    "provider": "stub",
+    "model": "stub"
+  },
+  "delivery": {
+    "channel": "file"
+  },
+  "scheduleHint": "0 7 * * *"
+}
