@@ -90,6 +90,10 @@ async function withAbort<T>(signal: AbortSignal, promise: Promise<T>): Promise<T
 export const ga4Connector: Connector<Ga4Config> = {
   id: "ga4",
   label: "Google Analytics",
+  description:
+    "Yesterday's sessions, bounce rate, and top pages via a GA4 service account.",
+  tags: ["analytics"],
+  setupDocs: ".env.example",
   requiredEnv: ["GA4_PROPERTY_ID", "GOOGLE_APPLICATION_CREDENTIALS"],
   configSchema: ga4ConfigSchema,
   async fetch(config: Ga4Config, ctx: RunContext): Promise<ConnectorResult> {

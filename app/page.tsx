@@ -1,14 +1,22 @@
+import { redirect } from "next/navigation";
 import { DemoBanner } from "@/app/_components/demo-banner";
 import { OutcomeList } from "@/app/_components/outcome-list";
 import { WakeButton } from "@/app/_components/wake-button";
 import { formatBriefTime } from "@/app/_lib/format";
 import { copy } from "@/src/copy";
-import { resolveRootDir } from "@/src/core/config";
+import { hasRoosterConfig, resolveRootDir } from "@/src/core/config";
 import { readLatestBrief } from "@/src/core/store";
 
 export default async function HomePage() {
   const rootDir = resolveRootDir();
   const brief = await readLatestBrief(rootDir);
+  const configPresent = hasRoosterConfig(rootDir);
+
+  // First-run: no local config yet — send them to Stock the Coop.
+  // After a demo hatch, still show the brief so the escape hatch lands somewhere.
+  if (!configPresent && !brief) {
+    redirect("/coop");
+  }
 
   if (!brief) {
     return (
@@ -19,7 +27,7 @@ export default async function HomePage() {
         </h1>
         <p className="text-muted">{copy.emptyCoopHint}</p>
         <div className="max-w-xs">
-          <WakeButton demo />
+          <WakeButton />
         </div>
       </main>
     );
@@ -37,6 +45,11 @@ export default async function HomePage() {
       </div>
 
       {brief.demo ? <DemoBanner /> : null}
+      {!configPresent ? (
+        <p className="rounded border border-accent/30 bg-surface-raised px-3 py-2 text-sm text-muted">
+          {copy.coop.firstRunAfterDemo}
+        </p>
+      ) : null}
 
       <article className="brief-prose rounded border border-border bg-surface px-4 py-4 text-[15px] text-foreground">
         {brief.text}

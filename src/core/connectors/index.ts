@@ -1,6 +1,8 @@
 import type { Connector } from "../types";
+import { calendarConnector } from "./calendar";
 import { demoConnector } from "./demo";
 import { ga4Connector } from "./ga4";
+import { githubConnector } from "./github";
 import { imapConnector } from "./imap";
 
 /**
@@ -8,6 +10,8 @@ import { imapConnector } from "./imap";
  * Pipeline looks up by id from rooster.config.json — no special cases.
  */
 export const connectors: readonly Connector[] = [
+  githubConnector,
+  calendarConnector,
   demoConnector,
   imapConnector,
   ga4Connector,

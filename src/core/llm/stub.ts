@@ -7,6 +7,9 @@ import type { LlmCompleteInput, LlmProvider, RunContext } from "../types";
 export const stubProvider: LlmProvider = {
   id: "stub",
   label: "Stub (offline)",
+  description: "Formats a readable brief without calling an API.",
+  tags: ["dev"],
+  setupDocs: "README.md",
   requiredEnv: [],
   async complete(
     input: LlmCompleteInput,

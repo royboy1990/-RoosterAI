@@ -14,6 +14,11 @@ interface OpenAiChatResponse {
 export const openaiCompatibleProvider: LlmProvider = {
   id: "openai-compatible",
   label: "OpenAI-compatible",
+  description:
+    "OpenAI, Groq, OpenRouter, Ollama, or LM Studio via chat completions.",
+  tags: ["llm"],
+  setupDocs: ".env.example",
+  optionalEnv: ["OPENAI_BASE_URL"],
   requiredEnv: ["OPENAI_API_KEY"],
   async complete(
     input: LlmCompleteInput,

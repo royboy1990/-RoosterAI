@@ -11,6 +11,9 @@ interface AnthropicMessageResponse {
 export const anthropicProvider: LlmProvider = {
   id: "anthropic",
   label: "Anthropic",
+  description: "Anthropic Messages API for the morning brief summary.",
+  tags: ["llm"],
+  setupDocs: ".env.example",
   requiredEnv: ["ANTHROPIC_API_KEY"],
   async complete(
     input: LlmCompleteInput,

@@ -31,6 +31,10 @@ function formatAddress(
 export const imapConnector: Connector<ImapConfig> = {
   id: "imap",
   label: "IMAP Mailbox",
+  description: "Unread mail from any IMAP host (Gmail app passwords work).",
+  tags: ["mail"],
+  setupDocs: ".env.example",
+  optionalEnv: ["IMAP_PORT"],
   requiredEnv: ["IMAP_HOST", "IMAP_USER", "IMAP_PASS"],
   configSchema: imapConfigSchema,
   async fetch(config: ImapConfig, ctx: RunContext): Promise<ConnectorResult> {

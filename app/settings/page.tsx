@@ -2,9 +2,9 @@ import { PreferencesForm } from "@/app/_components/preferences-form";
 import { isEnvSet } from "@/app/_lib/format";
 import { copy } from "@/src/copy";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
-import { connectors } from "@/src/core/connectors";
 import { deliveryChannels } from "@/src/core/delivery";
 import { llmProviders } from "@/src/core/llm";
+import { resolveConnectors } from "@/src/core/registry";
 
 interface KeyRow {
   name: string;
@@ -12,7 +12,9 @@ interface KeyRow {
   source: string;
 }
 
-function collectKeyRows(): KeyRow[] {
+function collectKeyRows(
+  loaded: Awaited<ReturnType<typeof loadConfig>> | null,
+): KeyRow[] {
   const rows: KeyRow[] = [];
   const seen = new Set<string>();
 
@@ -24,24 +26,36 @@ function collectKeyRows(): KeyRow[] {
     rows.push({ name, set: isEnvSet(name), source });
   };
 
-  for (const connector of connectors) {
-    for (const name of connector.requiredEnv) {
-      push(name, connector.label);
+  // Installed connectors only — available catalog items never hit the Keys board.
+  if (loaded) {
+    for (const card of resolveConnectors(loaded)) {
+      if (card.state === "available") {
+        continue;
+      }
+      for (const name of card.provider.requiredEnv) {
+        push(name, card.provider.label);
+      }
+      for (const name of card.provider.optionalEnv ?? []) {
+        push(name, `${card.provider.label} (optional)`);
+      }
     }
   }
-  // Optional IMAP port — still useful to surface.
-  push("IMAP_PORT", "IMAP Mailbox (optional)");
 
   for (const provider of llmProviders) {
     for (const name of provider.requiredEnv) {
       push(name, provider.label);
     }
+    for (const name of provider.optionalEnv ?? []) {
+      push(name, `${provider.label} (optional)`);
+    }
   }
-  push("OPENAI_BASE_URL", "OpenAI-compatible (optional)");
 
   for (const channel of deliveryChannels) {
     for (const name of channel.requiredEnv) {
       push(name, channel.label);
+    }
+    for (const name of channel.optionalEnv ?? []) {
+      push(name, `${channel.label} (optional)`);
     }
   }
 
@@ -57,26 +71,21 @@ export default async function SettingsPage() {
   let llmProvider = "stub";
   let llmModel = "stub";
   let deliveryChannel = "file";
-  const enabled = new Set<string>(["demo"]);
+  let loaded: Awaited<ReturnType<typeof loadConfig>> | null = null;
 
   try {
-    const loaded = await loadConfig({ rootDir });
+    loaded = await loadConfig({ rootDir });
     timezone = loaded.config.timezone;
     scheduleHint = loaded.config.scheduleHint ?? scheduleHint;
     llmProvider = loaded.config.llm.provider;
     llmModel = loaded.config.llm.model;
     deliveryChannel = loaded.config.delivery.channel;
-    enabled.clear();
-    for (const entry of loaded.config.connectors) {
-      if (entry.enabled) {
-        enabled.add(entry.id);
-      }
-    }
   } catch {
     // First-run: preferences form will create rooster.config.json on save.
   }
 
-  const keyRows = collectKeyRows();
+  const keyRows = collectKeyRows(loaded);
+  const hasInstalledConnectors = Boolean(loaded?.config.connectors.length);
 
   return (
     <main className="flex flex-col gap-10">
@@ -93,6 +102,9 @@ export default async function SettingsPage() {
           <p className="text-sm text-muted">{copy.settings.keysBlurb}</p>
           <p className="text-xs text-muted">{copy.settings.keysDocHint}</p>
         </div>
+        {!hasInstalledConnectors ? (
+          <p className="text-sm text-muted">{copy.settings.keysEmpty}</p>
+        ) : null}
         <ul className="divide-y divide-border border-t border-border">
           {keyRows.map((row) => (
             <li
@@ -131,11 +143,6 @@ export default async function SettingsPage() {
           llmProvider={llmProvider}
           llmModel={llmModel}
           deliveryChannel={deliveryChannel}
-          connectors={connectors.map((c) => ({
-            id: c.id,
-            label: c.label,
-            enabled: enabled.has(c.id),
-          }))}
           llmProviders={llmProviders.map((p) => ({
             id: p.id,
             label: p.label,

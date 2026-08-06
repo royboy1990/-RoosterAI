@@ -12,6 +12,9 @@ interface TelegramSendResponse {
 export const telegramDelivery: DeliveryChannel = {
   id: "telegram",
   label: "Telegram",
+  description: "Send the brief to a Telegram chat via Bot API.",
+  tags: ["delivery"],
+  setupDocs: ".env.example",
   requiredEnv: ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"],
   async deliver(payload: DeliveryPayload, ctx: RunContext): Promise<void> {
     const token = process.env.TELEGRAM_BOT_TOKEN!.trim();

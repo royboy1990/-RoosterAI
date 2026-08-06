@@ -16,7 +16,22 @@ export interface RunContext {
   log: (message: string) => void;
 }
 
-export interface Connector<TConfig = unknown> {
+/**
+ * Declarative picker metadata. UI never hardcodes a connector's name —
+ * forks appear in /coop search with their own blurb and setup link.
+ */
+export interface ProviderMeta {
+  /** One line, shown in the picker. */
+  description: string;
+  /** Search + grouping: "mail", "analytics", "calendar", "dev", etc. */
+  tags: readonly string[];
+  /** Path/URL rendered as "how to get these keys". */
+  setupDocs: string;
+  /** Unlocks extras; never blocks the run. */
+  optionalEnv?: readonly string[];
+}
+
+export interface Connector<TConfig = unknown> extends ProviderMeta {
   id: string;
   label: string;
   /** Env var names this connector needs. Missing ones = skipped, not crashed. */
@@ -31,7 +46,7 @@ export interface LlmCompleteInput {
   model: string;
 }
 
-export interface LlmProvider {
+export interface LlmProvider extends ProviderMeta {
   id: string;
   label: string;
   requiredEnv: readonly string[];
@@ -43,7 +58,7 @@ export interface DeliveryPayload {
   brief: BriefRecord;
 }
 
-export interface DeliveryChannel {
+export interface DeliveryChannel extends ProviderMeta {
   id: string;
   label: string;
   requiredEnv: readonly string[];

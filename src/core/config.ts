@@ -19,7 +19,8 @@ const roosterConfigSchema = z.object({
   connectorTimeoutMs: z.number().int().positive().default(30_000),
   /** Max characters kept per connector after sanitize. */
   perConnectorCharBudget: z.number().int().positive().default(4_000),
-  connectors: z.array(connectorEntrySchema).min(1),
+  /** Sparse — installed connectors only. Empty is a valid intermediate state. */
+  connectors: z.array(connectorEntrySchema).default([]),
   llm: z.object({
     provider: z.string().min(1),
     model: z.string().min(1).default("default"),
@@ -70,6 +71,16 @@ export interface LoadConfigOptions {
   rootDir?: string;
 }
 
+/** Absolute path to the local (non-demo) rooster.config.json. */
+export function roosterConfigPath(rootDir: string = resolveRootDir()): string {
+  return path.join(rootDir, "rooster.config.json");
+}
+
+/** True when the operator has created a local rooster.config.json. */
+export function hasRoosterConfig(rootDir: string = resolveRootDir()): boolean {
+  return existsSync(roosterConfigPath(rootDir));
+}
+
 /**
  * Loads + zod-validates rooster config and resolves env from `.env`.
  * Demo mode is a config preset path — not a pipeline branch.
@@ -80,12 +91,12 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Loade
 
   const configPath = options.demo
     ? path.join(rootDir, "rooster.config.demo.json")
-    : path.join(rootDir, "rooster.config.json");
+    : roosterConfigPath(rootDir);
 
   if (!existsSync(configPath)) {
     const hint = options.demo
       ? "rooster.config.demo.json is missing from the repo."
-      : "Copy rooster.config.example.json → rooster.config.json, or run with --demo.";
+      : "Stock sources in /coop, copy rooster.config.example.json, or run with --demo.";
     throw new Error(`Config not found at ${configPath}. ${hint}`);
   }
 

@@ -12,6 +12,9 @@ type DemoConfig = z.infer<typeof demoConfigSchema>;
 export const demoConnector: Connector<DemoConfig> = {
   id: "demo",
   label: "Demo Farm",
+  description: "Canned morning data — no network, no keys. Good for a first crow.",
+  tags: ["dev"],
+  setupDocs: "docs/CUSTOM-CONNECTORS.md",
   requiredEnv: [],
   configSchema: demoConfigSchema,
   async fetch(_config: DemoConfig, _ctx: RunContext): Promise<ConnectorResult> {

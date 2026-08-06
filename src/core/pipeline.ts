@@ -1,8 +1,13 @@
 import { copy } from "../copy";
 import type { LoadedConfig } from "./config";
-import { getConnector } from "./connectors";
 import { getDeliveryChannel } from "./delivery";
 import { getLlmProvider } from "./llm";
+import {
+  isActive,
+  isNeedsKeys,
+  resolveConnectors,
+  resolveUnknownInstalled,
+} from "./registry";
 import { buildDigest, sanitizeResult } from "./sanitize";
 import { appendLog, toBriefId, writeBrief } from "./store";
 import type {
@@ -61,30 +66,46 @@ async function gatherConnectors(
   loaded: LoadedConfig,
   ctx: RunContext,
 ): Promise<ConnectorOutcome[]> {
-  const { config, env } = loaded;
-  const enabled = config.connectors.filter((entry) => entry.enabled);
+  const { config } = loaded;
+  const cards = resolveConnectors(loaded);
+  const unknown = resolveUnknownInstalled(loaded);
+
+  const outcomes: ConnectorOutcome[] = [];
+
+  // needsKeys: installed intent, missing env — loud in "Still in the coop".
+  for (const card of cards) {
+    if (!isNeedsKeys(card)) {
+      continue;
+    }
+    outcomes.push({
+      connectorId: card.provider.id,
+      label: card.provider.label,
+      status: "skipped",
+      error: `missing env: ${card.missingEnv.join(", ")}`,
+    });
+  }
+
+  // Unknown fork ids that are enabled (not muted) fail loudly.
+  for (const card of unknown) {
+    if (card.state === "muted") {
+      continue;
+    }
+    outcomes.push({
+      connectorId: card.id,
+      label: card.id,
+      status: "failed",
+      error: `unknown connector id "${card.id}"`,
+    });
+  }
+
+  const active = cards.filter(isActive);
+  if (active.length === 0 && outcomes.length === 0) {
+    ctx.log(copy.emptyCoopPipeline);
+  }
 
   const settled = await Promise.allSettled(
-    enabled.map(async (entry): Promise<ConnectorOutcome> => {
-      const connector = getConnector(entry.id);
-      if (!connector) {
-        return {
-          connectorId: entry.id,
-          label: entry.id,
-          status: "failed",
-          error: `unknown connector id "${entry.id}"`,
-        };
-      }
-
-      const missing = missingEnv(connector.requiredEnv, env);
-      if (missing.length > 0) {
-        return {
-          connectorId: connector.id,
-          label: connector.label,
-          status: "skipped",
-          error: `missing env: ${missing.join(", ")}`,
-        };
-      }
+    active.map(async (card): Promise<ConnectorOutcome> => {
+      const { provider: connector, entry } = card;
 
       const parsed = connector.configSchema.safeParse(entry.config ?? {});
       if (!parsed.success) {
@@ -130,20 +151,24 @@ async function gatherConnectors(
     }),
   );
 
-  return settled.map((item, index) => {
+  for (let index = 0; index < settled.length; index++) {
+    const item = settled[index]!;
     if (item.status === "fulfilled") {
-      return item.value;
+      outcomes.push(item.value);
+      continue;
     }
-    const entry = enabled[index]!;
+    const card = active[index]!;
     const message =
       item.reason instanceof Error ? item.reason.message : String(item.reason);
-    return {
-      connectorId: entry.id,
-      label: entry.id,
-      status: "failed" as const,
+    outcomes.push({
+      connectorId: card.provider.id,
+      label: card.provider.label,
+      status: "failed",
       error: message,
-    };
-  });
+    });
+  }
+
+  return outcomes;
 }
 
 /**
@@ -195,7 +220,13 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
   let llmFailed = false;
   let llmError: string | undefined;
 
-  if (llmMissing.length > 0) {
+  // Skip the LLM when there is nothing to summarize (empty coop / all needsKeys / all failed).
+  const skipLlm = okResults.length === 0;
+
+  if (skipLlm) {
+    text = digest;
+    log(copy.skippedLlmEmpty);
+  } else if (llmMissing.length > 0) {
     llmFailed = true;
     llmError = `missing env: ${llmMissing.join(", ")}`;
     text = digest;

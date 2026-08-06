@@ -1,9 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
+import Link from "next/link";
+import { useState, useTransition } from "react";
 import { saveConfig, type ActionResult } from "@/app/actions";
 import { copy } from "@/src/copy";
-import { useState } from "react";
 
 export interface PreferencesFormProps {
   timezone: string;
@@ -11,7 +11,6 @@ export interface PreferencesFormProps {
   llmProvider: string;
   llmModel: string;
   deliveryChannel: string;
-  connectors: Array<{ id: string; label: string; enabled: boolean }>;
   llmProviders: Array<{ id: string; label: string }>;
   deliveryChannels: Array<{ id: string; label: string }>;
 }
@@ -33,31 +32,18 @@ export function PreferencesForm(props: PreferencesFormProps) {
         });
       }}
     >
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium text-foreground">
+      <div className="flex flex-col gap-1 rounded border border-border bg-background px-3 py-3 text-sm">
+        <span className="font-medium text-foreground">
           {copy.settings.connectorsHeading}
-        </legend>
-        <div className="flex flex-col gap-2">
-          {props.connectors.map((connector) => (
-            <label
-              key={connector.id}
-              className="flex items-center gap-2 text-sm text-foreground"
-            >
-              <input
-                type="checkbox"
-                name="connectorId"
-                value={connector.id}
-                defaultChecked={connector.enabled}
-                className="accent-accent"
-              />
-              <span>{connector.label}</span>
-              <span className="metric-mono text-xs text-muted">
-                ({connector.id})
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+        </span>
+        <p className="text-muted">{copy.settings.connectorsManagedInCoop}</p>
+        <Link
+          href="/coop"
+          className="w-fit text-foreground underline decoration-border underline-offset-2 hover:decoration-accent"
+        >
+          {copy.settings.openCoop}
+        </Link>
+      </div>
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted">{copy.settings.llmProvider}</span>
