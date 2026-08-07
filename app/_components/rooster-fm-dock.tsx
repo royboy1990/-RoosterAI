@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useRoosterFM } from "@/app/_components/rooster-fm-provider";
 import { copy } from "@/src/copy";
 import { roosterFmPlaylist } from "@/src/rooster-fm/playlist";
@@ -110,6 +116,57 @@ function RestoreIcon() {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+/** Spotify/Apple Music-style title: scrolls only when text overflows the slot. */
+function MarqueeTitle({ text }: { text: string }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const textRef = useRef<HTMLSpanElement | null>(null);
+  const [overflowPx, setOverflowPx] = useState(0);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const label = textRef.current;
+    if (!container || !label) {
+      return;
+    }
+
+    const measure = () => {
+      const delta = label.scrollWidth - container.clientWidth;
+      setOverflowPx(delta > 2 ? delta : 0);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    observer.observe(label);
+    return () => observer.disconnect();
+  }, [text]);
+
+  // ~14px/s scroll + pause time baked into the keyframes.
+  const durationSec =
+    overflowPx > 0 ? Math.max(10, overflowPx / 14 + 6) : undefined;
+
+  return (
+    <div ref={containerRef} className="overflow-hidden" title={text}>
+      <span
+        ref={textRef}
+        className={`inline-block max-w-none whitespace-nowrap text-sm font-medium text-foreground ${
+          overflowPx > 0 ? "marquee-title" : ""
+        }`}
+        style={
+          overflowPx > 0
+            ? ({
+                "--marquee-distance": `-${overflowPx}px`,
+                animationDuration: `${durationSec}s`,
+              } as CSSProperties)
+            : undefined
+        }
+      >
+        {text}
+      </span>
+    </div>
   );
 }
 
@@ -227,9 +284,7 @@ export function RoosterFmDock() {
 
           {/* Fixed track column so title length doesn't shove volume/actions. */}
           <div className="min-w-0 w-[11rem] shrink-0 sm:w-[14rem]">
-            <p className="truncate text-sm font-medium text-foreground">
-              {title}
-            </p>
+            <MarqueeTitle text={title} />
             <p className="truncate text-xs text-muted">
               {dragging ? copy.roosterFm.dropHint : artist}
             </p>

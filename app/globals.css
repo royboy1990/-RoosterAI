@@ -185,3 +185,32 @@ body {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
+
+/* Rooster FM dock: long track titles scroll like Spotify / Apple Music. */
+@keyframes marquee-title {
+  0%,
+  18% {
+    transform: translateX(0);
+  }
+  48%,
+  62% {
+    transform: translateX(var(--marquee-distance, 0));
+  }
+  92%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.marquee-title {
+  animation-name: marquee-title;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-title {
+    animation: none;
+  }
+}
