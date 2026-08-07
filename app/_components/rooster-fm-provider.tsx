@@ -140,6 +140,8 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
   const objectUrlsRef = useRef<string[]>([]);
   const hiddenBuiltinIdsRef = useRef<string[]>([]);
   const startOnLoadRef = useRef(false);
+  /** One-shot gate — must not re-fire after pause / playTrackAt identity churn. */
+  const startOnLoadHandledRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackIndex, setTrackIndex] = useState(0);
@@ -526,17 +528,30 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
     setStartOnLoadState(enabled);
   }, []);
 
+  const playTrackAtRef = useRef(playTrackAt);
+  playTrackAtRef.current = playTrackAt;
+
   // Prefer autoplay on open; if the browser blocks it, start on the next gesture.
+  // Do not depend on `playTrackAt` — it is recreated every render (fresh `playlist`
+  // array) and was re-triggering play after pause (seek to 0 via playTrackAt).
   useEffect(() => {
-    if (!prefsReady || !startOnLoad) {
+    if (!startOnLoad) {
+      startOnLoadHandledRef.current = false;
       return;
     }
-    if (playlist.length === 0 || isPlayingRef.current) {
+    if (!prefsReady || startOnLoadHandledRef.current) {
+      return;
+    }
+    if (playlist.length === 0) {
       return;
     }
 
     let cancelled = false;
     let waitingForGesture = false;
+
+    const markHandled = () => {
+      startOnLoadHandledRef.current = true;
+    };
 
     const detach = () => {
       window.removeEventListener("pointerdown", onGesture, true);
@@ -550,7 +565,8 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
         return;
       }
       detach();
-      void playTrackAt(trackIndexRef.current);
+      markHandled();
+      void playTrackAtRef.current(trackIndexRef.current);
     };
 
     const armGestureStart = () => {
@@ -565,11 +581,12 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
     // Arm first — autoplay usually fails, and a click during the attempt should still count.
     armGestureStart();
     void (async () => {
-      const started = await playTrackAt(trackIndexRef.current);
+      const started = await playTrackAtRef.current(trackIndexRef.current);
       if (cancelled) {
         return;
       }
       if (started) {
+        markHandled();
         detach();
       }
     })();
@@ -578,7 +595,7 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       detach();
     };
-  }, [prefsReady, startOnLoad, playlist.length, playTrackAt]);
+  }, [prefsReady, startOnLoad, playlist.length]);
 
   const addLocalFiles = useCallback(
     async (files: FileList | File[]) => {
