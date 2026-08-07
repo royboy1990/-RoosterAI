@@ -6,6 +6,7 @@ import path from "node:path";
 import { copy } from "@/src/copy";
 import {
   loadConfig,
+  OPERATOR_NAME_MAX,
   PROMPT_HISTORY_MAX,
   PROMPT_MAX_CHARS,
   resolveRootDir,
@@ -14,10 +15,21 @@ import {
   type PromptHistoryEntry,
   type RoosterConfig,
 } from "@/src/core/config";
+import {
+  ttsModeSchema,
+  ttsVoiceSchema,
+  type TtsMode,
+  type TtsVoice,
+} from "@/src/core/tts/voices";
 import { getConnector } from "@/src/core/connectors";
 import { listAccessibleGa4Properties } from "@/src/core/connectors/ga4";
 import type { Ga4PropertyInfo } from "@/src/core/connectors/ga4-shared";
 import { runPipeline } from "@/src/core/pipeline";
+import { appendLog, readBrief } from "@/src/core/store";
+import {
+  audioPrefsFromConfig,
+  generateAndPersistBriefAudio,
+} from "@/src/core/tts/brief-audio";
 import type { ActionResult } from "@/app/_lib/action-result";
 
 export type { ActionResult } from "@/app/_lib/action-result";
@@ -247,6 +259,12 @@ export async function saveConfig(formData: FormData): Promise<ActionResult> {
         timezone: String(
           formData.get("timezone") ?? existing.timezone ?? "UTC",
         ).trim() || "UTC",
+        // Preferences form edits name; setup / other saves preserve it.
+        operatorName: formData.has("operatorName")
+          ? String(formData.get("operatorName") ?? "")
+              .trim()
+              .slice(0, OPERATOR_NAME_MAX)
+          : (existing.operatorName ?? ""),
         llm: {
           provider: String(
             formData.get("llmProvider") ?? existing.llm.provider ?? "stub",
@@ -262,8 +280,11 @@ export async function saveConfig(formData: FormData): Promise<ActionResult> {
               "file",
           ),
         },
-        // Wake crow lives in the Audio section (`saveWakeSound`); preserve here.
+        // Audio section owns these (`saveAudioPrefs`); preserve here.
         wakeSound: existing.wakeSound ?? true,
+        ttsEnabled: existing.ttsEnabled ?? true,
+        ttsMode: existing.ttsMode ?? "each-wake",
+        ttsVoice: existing.ttsVoice ?? "marin",
         scheduleHint: String(
           formData.get("scheduleHint") ?? existing.scheduleHint ?? "0 7 * * *",
         ),
@@ -414,15 +435,32 @@ export async function listGa4Properties(): Promise<
   }
 }
 
-/** Audio section — wake crow only (Rooster FM defaults stay in the browser). */
-export async function saveWakeSound(enabled: boolean): Promise<ActionResult> {
+/** Audio section — wake crow + spoken-brief prefs (Rooster FM stays in the browser). */
+export async function saveAudioPrefs(prefs: {
+  wakeSound: boolean;
+  ttsEnabled: boolean;
+  ttsMode: TtsMode;
+  ttsVoice: TtsVoice;
+}): Promise<ActionResult> {
   try {
     return await enqueueConfigWrite(async () => {
       const rootDir = resolveRootDir();
       const loaded = await loadConfig({ rootDir });
+      const mode = ttsModeSchema.safeParse(prefs.ttsMode);
+      const voice = ttsVoiceSchema.safeParse(prefs.ttsVoice);
+      if (!mode.success || !voice.success) {
+        return {
+          ok: false as const,
+          message: copy.settings.audioSaveFailed,
+          error: "Invalid spoken-brief settings.",
+        };
+      }
       const draft = {
         ...loaded.config,
-        wakeSound: enabled,
+        wakeSound: prefs.wakeSound,
+        ttsEnabled: prefs.ttsEnabled,
+        ttsMode: mode.data,
+        ttsVoice: voice.data,
       };
       const parsed = roosterConfigSchema.safeParse(draft);
       if (!parsed.success) {
@@ -442,6 +480,98 @@ export async function saveWakeSound(enabled: boolean): Promise<ActionResult> {
     return {
       ok: false,
       message: copy.settings.audioSaveFailed,
+      error,
+    };
+  }
+}
+
+/** Wake crow only — preserves existing TTS prefs. */
+export async function saveWakeSound(enabled: boolean): Promise<ActionResult> {
+  const loaded = await loadConfig();
+  return saveAudioPrefs({
+    wakeSound: enabled,
+    ttsEnabled: loaded.config.ttsEnabled,
+    ttsMode: loaded.config.ttsMode,
+    ttsVoice: loaded.config.ttsVoice,
+  });
+}
+
+/** On-demand spoken brief for the Latest dashboard button. */
+export async function generateBriefAudio(
+  briefId: string,
+): Promise<ActionResult> {
+  const id = briefId.trim();
+  if (!id) {
+    return {
+      ok: false,
+      message: copy.latest.briefAudioFailed,
+      error: "Missing brief id.",
+    };
+  }
+
+  try {
+    const rootDir = resolveRootDir();
+    const loaded = await loadConfig({ rootDir });
+    const brief = await readBrief(rootDir, id);
+    if (!brief) {
+      return {
+        ok: false,
+        message: copy.latest.briefAudioFailed,
+        error: `Brief "${id}" not found.`,
+      };
+    }
+
+    if (!loaded.config.ttsEnabled) {
+      return {
+        ok: false,
+        message: copy.latest.briefAudioFailed,
+        error: "Spoken brief is disabled in Audio settings.",
+      };
+    }
+
+    const apiKey = loaded.env.OPENAI_API_KEY?.trim();
+    if (!apiKey) {
+      return {
+        ok: false,
+        message: copy.latest.briefAudioFailed,
+        error: "OPENAI_API_KEY is missing.",
+      };
+    }
+
+    const log = (message: string): void => {
+      console.log(message);
+      void appendLog(rootDir, message).catch((err: unknown) => {
+        console.error("failed to append rooster.log", err);
+      });
+    };
+
+    // Prefer brief timezone + createdAt so on-demand greeting matches the wake.
+    const now = new Date(brief.createdAt);
+    const prefs = {
+      ...audioPrefsFromConfig(loaded.config),
+      timezone: brief.timezone || loaded.config.timezone,
+    };
+
+    await generateAndPersistBriefAudio({
+      rootDir,
+      brief,
+      prefs,
+      now: Number.isNaN(now.getTime()) ? new Date() : now,
+      log,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/history");
+    return {
+      ok: true,
+      message: copy.latest.briefAudioReady,
+      briefId: id,
+    };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      message: copy.latest.briefAudioFailed,
       error,
     };
   }

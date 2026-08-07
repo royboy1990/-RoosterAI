@@ -29,7 +29,11 @@
   "delivery": {
     "channel": "file"
   },
+  "operatorName": "",
   "wakeSound": true,
+  "ttsEnabled": true,
+  "ttsMode": "each-wake",
+  "ttsVoice": "marin",
   "scheduleHint": "0 7 * * *",
   "prompts": {
     "overview": "",

@@ -2,6 +2,10 @@ import { FoldableKeyGroup } from "@/app/_components/foldable-key-group";
 import { Ga4PropertyPicker } from "@/app/_components/ga4-property-picker";
 import { AudioPreferences } from "@/app/_components/audio-preferences";
 import { PreferencesForm } from "@/app/_components/preferences-form";
+import {
+  SettingsKeysIcon,
+  SettingsPreferencesIcon,
+} from "@/app/_components/settings-section-icons";
 import { SettingsSectionFold } from "@/app/_components/settings-section-fold";
 import { SourceLogo } from "@/app/_components/source-logo";
 import { isEnvSet } from "@/app/_lib/format";
@@ -322,6 +326,7 @@ export default async function SettingsPage() {
       {/* Keys: read-only status board — no secret inputs on purpose. */}
       <SettingsSectionFold
         title={copy.settings.keysHeading}
+        icon={<SettingsKeysIcon />}
         summary={keysFoldSummary}
         defaultOpen={keysDefaultOpen}
         className="border-border bg-surface/80"
@@ -406,18 +411,29 @@ export default async function SettingsPage() {
         />
       ) : null}
 
-      <AudioPreferences wakeSound={loaded.config.wakeSound} />
+      <AudioPreferences
+        wakeSound={loaded.config.wakeSound}
+        ttsEnabled={loaded.config.ttsEnabled}
+        ttsMode={loaded.config.ttsMode}
+        ttsVoice={loaded.config.ttsVoice}
+      />
 
       {/* Preferences: editable, never secrets — stays expanded. */}
       <section className="flex flex-col gap-3 rounded border border-accent/25 bg-surface-raised/80 p-4 backdrop-blur-md">
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-medium text-foreground">
-            {copy.settings.preferencesHeading}
-          </h2>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex text-muted">
+              <SettingsPreferencesIcon />
+            </span>
+            <h2 className="text-lg font-medium leading-none text-foreground">
+              {copy.settings.preferencesHeading}
+            </h2>
+          </div>
           <p className="text-sm text-muted">{copy.settings.preferencesBlurb}</p>
         </div>
         <PreferencesForm
           timezone={timezone}
+          operatorName={loaded.config.operatorName}
           scheduleHint={scheduleHint}
           llmProvider={llmProvider}
           llmModel={llmModel}

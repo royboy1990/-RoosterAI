@@ -1,4 +1,5 @@
 import { BriefProse } from "@/app/_components/brief-prose";
+import { BriefAudioButton } from "@/app/_components/brief-audio-button";
 import { DefaultsBanner } from "@/app/_components/defaults-banner";
 import { DemoBanner } from "@/app/_components/demo-banner";
 import { OutcomeList } from "@/app/_components/outcome-list";
@@ -33,6 +34,8 @@ export default async function HomePage() {
   const bodyBrief = await resolveSubstantiveBrief(rootDir, brief);
   const showingPrior =
     brief.wakeMode === "unchanged" && bodyBrief.id !== brief.id;
+  const showAudioButton =
+    loaded.config.ttsEnabled || Boolean(bodyBrief.audioRelativePath);
 
   return (
     <main className="flex flex-col gap-6">
@@ -42,9 +45,20 @@ export default async function HomePage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           {copy.latest.title}
         </h1>
-        <p className="metric-mono text-xs text-muted">
-          {formatBriefTime(brief.createdAt, brief.timezone)} · {brief.id}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="metric-mono text-xs text-muted">
+            {formatBriefTime(brief.createdAt, brief.timezone)} · {brief.id}
+          </p>
+          {showAudioButton ? (
+            <BriefAudioButton
+              key={bodyBrief.id}
+              briefId={bodyBrief.id}
+              hasAudio={Boolean(bodyBrief.audioRelativePath)}
+              briefVoice={bodyBrief.ttsVoice}
+              settingsVoice={loaded.config.ttsVoice}
+            />
+          ) : null}
+        </div>
         {showingPrior ? (
           <p className="text-sm text-muted">
             {copy.latest.unchangedNotice(

@@ -11,6 +11,10 @@ import {
 } from "./registry";
 import { buildDigest, sanitizeResult } from "./sanitize";
 import { appendLog, toBriefId, writeBrief } from "./store";
+import {
+  audioPrefsFromConfig,
+  createBriefAudioFile,
+} from "./tts/brief-audio";
 import type {
   BriefRecord,
   ConnectorOutcome,
@@ -322,6 +326,32 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     wakeMode,
     baselineBriefId,
   };
+
+  const openaiKey = loaded.env.OPENAI_API_KEY?.trim();
+  if (
+    config.ttsEnabled &&
+    config.ttsMode === "each-wake" &&
+    openaiKey
+  ) {
+    try {
+      const audio = await createBriefAudioFile({
+        rootDir,
+        briefId: brief.id,
+        text: brief.text,
+        prefs: audioPrefsFromConfig(config),
+        now,
+        signal: ctx.signal,
+        log,
+      });
+      brief.audioRelativePath = audio.audioRelativePath;
+      brief.ttsVoice = audio.ttsVoice;
+      log(`tts: saved ${audio.audioRelativePath} voice=${audio.ttsVoice}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      brief.ttsError = message;
+      log(`tts failed (wake continues): ${message}`);
+    }
+  }
 
   await delivery.deliver({ text, brief }, ctx);
   const filePath = await writeBrief(rootDir, brief);
