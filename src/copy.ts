@@ -154,6 +154,9 @@ export const copy = {
     llmModel: "Model",
     llmDefaultsHint: "Defaults by provider",
     deliveryChannel: "Delivery",
+    wakeSound: "Wake crow",
+    wakeSoundHint:
+      "Play the crow when Wake the Flock Up finishes successfully.",
     connectorsHeading: "Connectors",
     connectorsManagedInCoop: "Stock and mute sources in the Coop.",
     openCoop: "Open the Coop",

@@ -29,6 +29,7 @@
   "delivery": {
     "channel": "file"
   },
+  "wakeSound": true,
   "scheduleHint": "0 7 * * *",
   "prompts": {
     "overview": "",

@@ -262,6 +262,10 @@ export async function saveConfig(formData: FormData): Promise<ActionResult> {
               "file",
           ),
         },
+        // Setup form has no checkbox — preserve existing. Preferences always sends intent.
+        wakeSound: setupMode
+          ? (existing.wakeSound ?? true)
+          : formData.get("wakeSound") === "1",
         scheduleHint: String(
           formData.get("scheduleHint") ?? existing.scheduleHint ?? "0 7 * * *",
         ),

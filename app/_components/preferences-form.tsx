@@ -24,6 +24,7 @@ export interface PreferencesFormProps {
   llmProvider: string;
   llmModel: string;
   deliveryChannel: string;
+  wakeSound: boolean;
   systemPrompt: string;
   overviewPrompt: string;
   promptHistory: PromptHistoryEntry[];
@@ -48,6 +49,7 @@ export function PreferencesForm(props: PreferencesFormProps) {
   const [result, setResult] = useState<ActionResult | null>(null);
   const [llmProvider, setLlmProvider] = useState(props.llmProvider);
   const [llmModel, setLlmModel] = useState(props.llmModel);
+  const [wakeSound, setWakeSound] = useState(props.wakeSound);
   const [systemPrompt, setSystemPrompt] = useState(props.systemPrompt);
   const [overviewPrompt, setOverviewPrompt] = useState(props.overviewPrompt);
   const [timezone, setTimezone] = useState(props.timezone);
@@ -56,6 +58,10 @@ export function PreferencesForm(props: PreferencesFormProps) {
   useEffect(() => {
     setTimezone(props.timezone);
   }, [props.timezone]);
+
+  useEffect(() => {
+    setWakeSound(props.wakeSound);
+  }, [props.wakeSound]);
 
   useEffect(() => {
     const latest = props.promptHistory[0]?.id ?? "";
@@ -114,7 +120,8 @@ export function PreferencesForm(props: PreferencesFormProps) {
         >
           {props.llmProviders.map((provider) => (
             <option key={provider.id} value={provider.id}>
-              {provider.label} · {provider.defaultModel}
+              {provider.label} ·{" "}
+              {provider.id === llmProvider ? llmModel : provider.defaultModel}
             </option>
           ))}
         </select>
@@ -155,6 +162,23 @@ export function PreferencesForm(props: PreferencesFormProps) {
             </option>
           ))}
         </select>
+      </label>
+
+      <label className="flex cursor-pointer items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          name="wakeSound"
+          value="1"
+          checked={wakeSound}
+          onChange={(event) => setWakeSound(event.target.checked)}
+          className="mt-1"
+        />
+        <span className="flex flex-col gap-1">
+          <span className="font-medium text-foreground">
+            {copy.settings.wakeSound}
+          </span>
+          <span className="text-muted">{copy.settings.wakeSoundHint}</span>
+        </span>
       </label>
 
       <label className="flex flex-col gap-1 text-sm">

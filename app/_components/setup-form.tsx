@@ -109,7 +109,8 @@ export function SetupForm(props: SetupFormProps) {
           >
             {props.llmProviders.map((provider) => (
               <option key={provider.id} value={provider.id}>
-                {provider.label} · {provider.defaultModel}
+                {provider.label} ·{" "}
+                {provider.id === llmProvider ? llmModel : provider.defaultModel}
               </option>
             ))}
           </select>

@@ -58,6 +58,8 @@ const roosterConfigSchema = z.object({
   delivery: z.object({
     channel: z.string().min(1),
   }),
+  /** Play crow MP3 when a dashboard Wake the Flock Up succeeds. */
+  wakeSound: z.boolean().default(true),
   scheduleHint: z.string().optional(),
   prompts: promptsSchema.default({ overview: "", history: [] }),
 });

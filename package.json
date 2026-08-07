@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "wake": "tsx src/core/run.ts",
+    "check:secrets": "tsx scripts/check-secrets.ts",
     "generate:wake-workflow": "tsx scripts/generate-wake-workflow.ts"
   },
   "dependencies": {
