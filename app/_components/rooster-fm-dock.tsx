@@ -306,26 +306,3 @@ export function RoosterFmDock() {
     </div>
   );
 }
-
-/** Compact header control — toggles play; Wake stays the primary CTA. */
-export function RoosterFmHeaderButton() {
-  const { isPlaying, toggle } = useRoosterFM();
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-pressed={isPlaying}
-      aria-label={isPlaying ? copy.roosterFm.pause : copy.roosterFm.play}
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-muted transition hover:border-accent/40 hover:text-foreground"
-    >
-      {copy.roosterFm.label}
-      <span
-        className="inline-grid size-3.5 shrink-0 place-items-center text-accent"
-        aria-hidden
-      >
-        {isPlaying ? <PauseIcon /> : <PlayIcon />}
-      </span>
-    </button>
-  );
-}

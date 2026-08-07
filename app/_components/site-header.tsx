@@ -6,7 +6,6 @@ import {
   coopStatusLabel,
   formatHeaderTime,
 } from "@/app/_lib/format";
-import { RoosterFmHeaderButton } from "@/app/_components/rooster-fm-dock";
 import { WakeButton } from "@/app/_components/wake-provider";
 
 export function SiteHeader({
@@ -65,7 +64,6 @@ export function SiteHeader({
           </nav>
         </div>
         <div className="flex shrink-0 flex-nowrap items-center gap-2 self-start sm:self-center">
-          <RoosterFmHeaderButton />
           <WakeButton />
         </div>
       </div>
