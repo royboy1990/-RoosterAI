@@ -383,12 +383,14 @@ export default async function SettingsPage() {
         </ul>
       </section>
 
-      <Ga4PropertyPicker
-        credentialsReady={ga4.credentialsReady}
-        initialProperties={ga4.properties}
-        initialSelectedIds={ga4.selectedIds}
-        initialError={ga4.error}
-      />
+      {loaded.config.connectors.some((connector) => connector.id === "ga4") ? (
+        <Ga4PropertyPicker
+          credentialsReady={ga4.credentialsReady}
+          initialProperties={ga4.properties}
+          initialSelectedIds={ga4.selectedIds}
+          initialError={ga4.error}
+        />
+      ) : null}
 
       {/* Preferences: editable, never secrets. */}
       <section className="flex flex-col gap-3 rounded border border-accent/25 bg-surface-raised p-4">
@@ -404,6 +406,7 @@ export default async function SettingsPage() {
           llmProvider={llmProvider}
           llmModel={llmModel}
           deliveryChannel={deliveryChannel}
+          wakeSound={loaded.config.wakeSound}
           systemPrompt={
             loaded.config.prompts.system?.trim() || copy.briefSystemPrompt
           }

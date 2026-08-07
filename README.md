@@ -82,7 +82,7 @@ Or skip the file copy: open `/coop`, install what you want, then drop keys in `.
 
 ### Tier 2 — delivery
 
-Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, set `"delivery": { "channel": "telegram" }` in config.
+Telegram → see **Telegram — Bot API delivery** under [Connector setup guides](#connector-setup-guides). Short version: BotFather token + chat id in `.env`, then set delivery to `telegram` in Settings.
 
 ### Tier 3 — everything else
 
@@ -134,6 +134,74 @@ That records intent in `rooster.config.json` (`maxEvents` defaults to 20). If th
 Hit **Wake the Flock Up** (or `npm run wake`). The brief should include a **Calendar** section with today's events, or `Nothing on the calendar for YYYY-MM-DD (Your/Timezone).` if the day is empty.
 
 If it fails, check `data/rooster.log` for `calendar: fetching ICS…` and errors like `Calendar ICS fetch` or `did not return an iCalendar feed`.
+
+</details>
+
+<details>
+<summary><strong>Telegram — Bot API delivery</strong></summary>
+
+<br>
+
+RoosterAI sends the finished brief with Telegram’s Bot API (`sendMessage`). You need a bot token and your personal chat id — then set delivery to Telegram. Verified path below is **Telegram Web** ([web.telegram.org](https://web.telegram.org)).
+
+① **Create the bot (BotFather)**
+
+1. Open Telegram Web and search **`@BotFather`** → open the chat → **Start** if needed.
+2. Send `/newbot` (or use BotFather’s create-bot UI).
+3. In the **New bot** form:
+   - **Bot Name** — display name (e.g. `RoosterAI`)
+   - **About** — optional
+   - **Username** — must end in `bot` (e.g. `rooster_ai_bot` → `@rooster_ai_bot`)
+4. Click **CREATE BOT**.
+5. BotFather shows a popup with your bot and the **HTTP API token**. Click **Copy**. That string is `TELEGRAM_BOT_TOKEN`.
+6. Close the popup.
+
+Keep the token private — anyone with it can control the bot. Prefer **Copy** over screenshotting.
+
+② **Open a chat with your bot (required)**
+
+BotFather does not leave you inside the bot chat. After you close the popup:
+
+1. In Telegram Web search, type the **username you chose** (e.g. `rooster_ai_bot` or `@rooster_ai_bot`).
+2. Open that chat → **Start** (or send `hi`).
+
+Until you do this, Rooster has nowhere to deliver.
+
+③ **Get your chat id**
+
+For a private chat, `TELEGRAM_CHAT_ID` is **your** Telegram user id (digits), not the bot’s username.
+
+**Reliable (Telegram Web):**
+
+1. Search **`@userinfobot`** (or **`@getidsbot`**).
+2. Open it → **Start**.
+3. Copy the numeric **Id** it replies with → that is `TELEGRAM_CHAT_ID`.
+
+**Optional fallback:** after step ②, open  
+`https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`  
+in a browser and look for `"chat":{"id":…}`. If `result` is `[]` or the page is unhelpful, ignore this method and use `@userinfobot`.
+
+④ **Put secrets in `.env`**
+
+```env
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
+TELEGRAM_CHAT_ID=123456789
+```
+
+No quotes. Restart `npm run dev` after saving so the process reloads dotenv.
+
+⑤ **Switch delivery to Telegram**
+
+Dashboard → **Settings** → **Delivery** → **Telegram** → save  
+(or set `"delivery": { "channel": "telegram" }` in `rooster.config.json`).
+
+Settings → Keys should show Telegram as **ready** once both env vars load.
+
+⑥ **Wake and verify**
+
+Hit **Wake the Flock Up** (or `npm run wake`). The brief should appear in the bot chat on Telegram Web / mobile. A copy still lands under `data/briefs/` as usual.
+
+If it fails, check `data/rooster.log` for `telegram: sendMessage` and the API error text. Classic issues: delivery still set to `file`, never pressed **Start** on the bot, wrong chat id, or `npm run dev` not restarted after editing `.env`.
 
 </details>
 

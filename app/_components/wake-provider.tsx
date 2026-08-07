@@ -25,7 +25,58 @@ interface WakeContextValue {
 
 const WakeContext = createContext<WakeContextValue | null>(null);
 
-export function WakeProvider({ children }: { children: ReactNode }) {
+/** Unlock audio during the click gesture so we can crow when delivery finishes. */
+function prepareCrow(): { playWhenReady: () => void } {
+  const crow = new Audio("/sounds/wake-the-flock-up.mp3");
+  crow.preload = "auto";
+  crow.muted = true;
+
+  let unlocked = false;
+  let wantsPlay = false;
+
+  void crow
+    .play()
+    .then(() => {
+      crow.pause();
+      crow.currentTime = 0;
+      crow.muted = false;
+      unlocked = true;
+      if (wantsPlay) {
+        wantsPlay = false;
+        void crow.play().catch(() => undefined);
+      }
+    })
+    .catch(() => {
+      crow.muted = false;
+      unlocked = true;
+      if (wantsPlay) {
+        wantsPlay = false;
+        void crow.play().catch(() => undefined);
+      }
+    });
+
+  return {
+    playWhenReady: () => {
+      if (!unlocked) {
+        wantsPlay = true;
+        return;
+      }
+      crow.muted = false;
+      crow.currentTime = 0;
+      void crow.play().catch(() => {
+        // Browser may still block; wake result still shows.
+      });
+    },
+  };
+}
+
+export function WakeProvider({
+  children,
+  wakeSound = true,
+}: {
+  children: ReactNode;
+  wakeSound?: boolean;
+}) {
   const [isPending, startTransition] = useTransition();
   const [phase, setPhase] = useState<WakePhase>("idle");
   const [result, setResult] = useState<ActionResult | null>(null);
@@ -41,15 +92,15 @@ export function WakeProvider({ children }: { children: ReactNode }) {
   }, [isPending]);
 
   const wake = (options: { demo?: boolean } = {}): void => {
-    const crow = new Audio("/sounds/wake-the-flock-up.mp3");
-    void crow.play().catch(() => {
-      // Browser may block playback; wake still proceeds.
-    });
+    const crow = wakeSound ? prepareCrow() : null;
 
     setResult(null);
     startTransition(async () => {
       const next = await wakeTheFlock({ demo: options.demo });
       setResult(next);
+      if (next.ok && crow) {
+        crow.playWhenReady();
+      }
     });
   };
 
@@ -72,15 +123,20 @@ export function WakeButton({ demo = false }: { demo?: boolean }) {
   const { isPending, phase, wake } = useWake();
   const pendingLabel =
     phase === "llm" ? copy.pendingLlm : copy.pendingGather;
+  const label = isPending ? pendingLabel : copy.wakeAction;
 
   return (
     <button
       type="button"
       disabled={isPending}
       onClick={() => wake({ demo })}
-      className="rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-background transition hover:bg-accent-dim disabled:cursor-wait disabled:opacity-80"
+      className="inline-grid rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-background transition hover:bg-accent-dim disabled:cursor-wait disabled:opacity-80"
     >
-      {isPending ? pendingLabel : copy.wakeAction}
+      {/* Size to the longest label so the button doesn't grow while pending. */}
+      <span className="invisible col-start-1 row-start-1 whitespace-nowrap" aria-hidden>
+        {copy.pendingGather}
+      </span>
+      <span className="col-start-1 row-start-1 whitespace-nowrap">{label}</span>
     </button>
   );
 }

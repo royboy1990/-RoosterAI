@@ -39,13 +39,15 @@ export const openaiCompatibleProvider: LlmProvider = {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
+      // Omit temperature: GPT-5 / o-series (and some compatible hosts) reject
+      // any value other than the model default. Older chat models use their
+      // API default, which is fine for a morning brief.
       body: JSON.stringify({
         model: input.model,
         messages: [
           { role: "system", content: input.system },
           { role: "user", content: input.user },
         ],
-        temperature: 0.2,
       }),
       signal: ctx.signal,
     });
