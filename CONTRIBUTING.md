@@ -2,6 +2,8 @@
 
 Thanks for pecking around. Keep changes small, keep `src/core/**` free of Next.js imports, and put user-facing strings in `src/copy.ts`.
 
+By participating, you agree to follow our [Code of Conduct](./CODE_OF_CONDUCT.md).
+
 ## Add a connector in three steps
 
 `src/core/connectors/demo.ts` is the reference implementation — copy it, don't invent a parallel template full of TODOs.
