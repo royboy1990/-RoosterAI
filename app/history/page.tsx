@@ -52,7 +52,7 @@ export default async function HistoryPage() {
               <li key={brief.id}>
                 <Link
                   href="/"
-                  className="flex flex-col gap-1 rounded border border-border bg-surface px-3 py-3 transition hover:border-accent/40"
+                  className="flex flex-col gap-1 rounded border border-border bg-surface/80 px-3 py-3 backdrop-blur-md transition hover:border-accent/40"
                 >
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span className="metric-mono text-foreground">

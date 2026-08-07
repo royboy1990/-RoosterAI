@@ -1,6 +1,8 @@
 import { FoldableKeyGroup } from "@/app/_components/foldable-key-group";
 import { Ga4PropertyPicker } from "@/app/_components/ga4-property-picker";
+import { AudioPreferences } from "@/app/_components/audio-preferences";
 import { PreferencesForm } from "@/app/_components/preferences-form";
+import { SettingsSectionFold } from "@/app/_components/settings-section-fold";
 import { SourceLogo } from "@/app/_components/source-logo";
 import { isEnvSet } from "@/app/_lib/format";
 import { loadGa4PickerState } from "@/app/_lib/ga4";
@@ -300,6 +302,16 @@ export default async function SettingsPage() {
   const keyGroups = collectKeyGroups(loaded);
   const hasInstalledConnectors = loaded.config.connectors.length > 0;
   const ga4 = await loadGa4PickerState(loaded, rootDir);
+  const keysNeedingAttention = keyGroups.filter(
+    (group) => group.status === "needsKeys",
+  ).length;
+  const keysDefaultOpen =
+    !hasInstalledConnectors || keysNeedingAttention > 0;
+  const keysFoldSummary = !hasInstalledConnectors
+    ? copy.settings.keysFoldEmpty
+    : keysNeedingAttention > 0
+      ? copy.settings.keysFoldAttention(keysNeedingAttention)
+      : copy.settings.keysFoldReady(keyGroups.length);
 
   return (
     <main className="flex flex-col gap-10">
@@ -308,80 +320,82 @@ export default async function SettingsPage() {
       </h1>
 
       {/* Keys: read-only status board — no secret inputs on purpose. */}
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-medium text-foreground">
-            {copy.settings.keysHeading}
-          </h2>
-          <p className="text-sm text-muted">{copy.settings.keysBlurb}</p>
-          <p className="text-xs text-muted">{copy.settings.keysDocHint}</p>
-        </div>
+      <SettingsSectionFold
+        title={copy.settings.keysHeading}
+        summary={keysFoldSummary}
+        defaultOpen={keysDefaultOpen}
+        className="border-border bg-surface/80"
+      >
+        <p className="text-sm text-muted">{copy.settings.keysBlurb}</p>
+        <p className="text-xs text-muted">{copy.settings.keysDocHint}</p>
         {!hasInstalledConnectors ? (
           <p className="text-sm text-muted">{copy.settings.keysEmpty}</p>
         ) : null}
-        <ul className="flex flex-col gap-5 border-t border-border pt-3">
-          {keyGroups.map((group) => (
-            <li key={group.id}>
-              <FoldableKeyGroup
-                defaultOpen={group.status !== "ready"}
-                leading={
-                  <>
-                    <SourceLogo
-                      sourceId={group.sourceId}
-                      className="size-4 shrink-0 text-muted"
-                    />
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <p className="text-sm font-medium text-foreground">
-                        {group.label}
-                      </p>
-                      {group.blurb ? (
-                        <p className="text-xs text-muted">{group.blurb}</p>
-                      ) : null}
-                    </div>
-                  </>
-                }
-                trailing={
-                  <span className={groupStatusClass(group.status)}>
-                    {groupStatusLabel(group.status)}
-                    {group.statusDetail ? ` · ${group.statusDetail}` : ""}
-                  </span>
-                }
-              >
-                <ul className="divide-y divide-border border-t border-border">
-                  {group.rows.map((row) => (
-                    <li
-                      key={`${group.id}:${row.name}`}
-                      className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm"
-                    >
-                      <div className="flex min-w-0 items-start gap-2.5 pl-5">
-                        <SourceLogo
-                          sourceId={row.sourceId}
-                          className="mt-0.5 size-4 shrink-0 text-muted"
-                        />
-                        <span className="metric-mono text-foreground">
-                          {row.name}
-                        </span>
-                      </div>
-                      <KeyStatusBadge
-                        set={row.set}
-                        optional={row.optional}
-                        inUse={row.inUse}
-                        softMissing={
-                          group.status === "unused" ||
-                          group.status === "stub" ||
-                          (group.id === "llm" &&
-                            group.status === "ready" &&
-                            !row.inUse)
-                        }
+        {hasInstalledConnectors ? (
+          <ul className="flex flex-col gap-5 border-t border-border pt-3">
+            {keyGroups.map((group) => (
+              <li key={group.id}>
+                <FoldableKeyGroup
+                  defaultOpen={group.status !== "ready"}
+                  leading={
+                    <div className="flex min-w-0 items-center gap-2">
+                      <SourceLogo
+                        sourceId={group.sourceId}
+                        className="size-4 shrink-0 text-muted"
                       />
-                    </li>
-                  ))}
-                </ul>
-              </FoldableKeyGroup>
-            </li>
-          ))}
-        </ul>
-      </section>
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <p className="text-sm font-medium text-foreground">
+                          {group.label}
+                        </p>
+                        {group.blurb ? (
+                          <p className="text-xs text-muted">{group.blurb}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  }
+                  trailing={
+                    <span className={groupStatusClass(group.status)}>
+                      {groupStatusLabel(group.status)}
+                      {group.statusDetail ? ` · ${group.statusDetail}` : ""}
+                    </span>
+                  }
+                >
+                  <ul className="divide-y divide-border border-t border-border">
+                    {group.rows.map((row) => (
+                      <li
+                        key={`${group.id}:${row.name}`}
+                        className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm"
+                      >
+                        <div className="flex min-w-0 items-start gap-2.5 pl-5">
+                          <SourceLogo
+                            sourceId={row.sourceId}
+                            className="mt-0.5 size-4 shrink-0 text-muted"
+                          />
+                          <span className="metric-mono text-foreground">
+                            {row.name}
+                          </span>
+                        </div>
+                        <KeyStatusBadge
+                          set={row.set}
+                          optional={row.optional}
+                          inUse={row.inUse}
+                          softMissing={
+                            group.status === "unused" ||
+                            group.status === "stub" ||
+                            (group.id === "llm" &&
+                              group.status === "ready" &&
+                              !row.inUse)
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </FoldableKeyGroup>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </SettingsSectionFold>
 
       {loaded.config.connectors.some((connector) => connector.id === "ga4") ? (
         <Ga4PropertyPicker
@@ -392,8 +406,10 @@ export default async function SettingsPage() {
         />
       ) : null}
 
-      {/* Preferences: editable, never secrets. */}
-      <section className="flex flex-col gap-3 rounded border border-accent/25 bg-surface-raised p-4">
+      <AudioPreferences wakeSound={loaded.config.wakeSound} />
+
+      {/* Preferences: editable, never secrets — stays expanded. */}
+      <section className="flex flex-col gap-3 rounded border border-accent/25 bg-surface-raised/80 p-4 backdrop-blur-md">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-medium text-foreground">
             {copy.settings.preferencesHeading}
@@ -406,7 +422,6 @@ export default async function SettingsPage() {
           llmProvider={llmProvider}
           llmModel={llmModel}
           deliveryChannel={deliveryChannel}
-          wakeSound={loaded.config.wakeSound}
           systemPrompt={
             loaded.config.prompts.system?.trim() || copy.briefSystemPrompt
           }

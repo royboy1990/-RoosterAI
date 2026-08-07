@@ -45,7 +45,7 @@ export default async function HomePage() {
 
       {brief.demo ? <DemoBanner /> : null}
 
-      <article className="brief-prose rounded border border-border bg-surface px-4 py-4 text-[15px] text-foreground">
+      <article className="brief-prose rounded border border-border bg-surface/80 px-4 py-4 text-[15px] text-foreground backdrop-blur-md">
         <BriefProse text={brief.text} />
       </article>
 

@@ -262,10 +262,8 @@ export async function saveConfig(formData: FormData): Promise<ActionResult> {
               "file",
           ),
         },
-        // Setup form has no checkbox — preserve existing. Preferences always sends intent.
-        wakeSound: setupMode
-          ? (existing.wakeSound ?? true)
-          : formData.get("wakeSound") === "1",
+        // Wake crow lives in the Audio section (`saveWakeSound`); preserve here.
+        wakeSound: existing.wakeSound ?? true,
         scheduleHint: String(
           formData.get("scheduleHint") ?? existing.scheduleHint ?? "0 7 * * *",
         ),
@@ -411,6 +409,39 @@ export async function listGa4Properties(): Promise<
     return {
       ok: false,
       message: copy.ga4.loadFailed,
+      error,
+    };
+  }
+}
+
+/** Audio section — wake crow only (Rooster FM defaults stay in the browser). */
+export async function saveWakeSound(enabled: boolean): Promise<ActionResult> {
+  try {
+    return await enqueueConfigWrite(async () => {
+      const rootDir = resolveRootDir();
+      const loaded = await loadConfig({ rootDir });
+      const draft = {
+        ...loaded.config,
+        wakeSound: enabled,
+      };
+      const parsed = roosterConfigSchema.safeParse(draft);
+      if (!parsed.success) {
+        return {
+          ok: false as const,
+          message: copy.settings.audioSaveFailed,
+          error: parsed.error.issues.map((i) => i.message).join("; "),
+        };
+      }
+      await writeRoosterConfig(rootDir, parsed.data);
+      revalidatePath("/settings");
+      revalidatePath("/");
+      return { ok: true as const, message: copy.settings.audioSaved };
+    });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      message: copy.settings.audioSaveFailed,
       error,
     };
   }

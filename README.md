@@ -56,6 +56,26 @@ Open [http://localhost:3000](http://localhost:3000). First run lands on **Stock 
 
 Primary action everywhere: **Wake the Flock Up** (`npm run wake`).
 
+## Rooster FM
+
+Ambient morning radio behind the dashboard (dawn field + dock). Two compressed seed tracks ship with the repo so playback works out of the box.
+
+| What | Where it lives |
+|------|----------------|
+| **Seed beds** | `public/audio/A_Room_at_Daybreak.mp3`, `public/audio/Window_Seat_Sunrise.mp3` (committed, ~1.7 MB each) |
+| **Your extra tracks** | This browser only (IndexedDB) — never the git repo |
+
+### Add personal tracks
+
+1. Start the dashboard (`npm run dev`) and open the bottom **Rooster FM** dock.
+2. Click **Add**, or **drag and drop** MP3s onto the dock.
+3. Prev/next cycles the seed tracks plus anything you added.
+4. **Remove** hides the current track from your player. Personal tracks are deleted from this browser; seed beds stay in the repo and can be brought back with **Restore seeds**.
+
+Personal audio is not uploaded and is gitignored under `public/audio/*` (except the seed files and README). Keep files under ~25 MB each.
+
+See also [`public/audio/README.md`](./public/audio/README.md).
+
 ## Onboarding ladder
 
 | Tier | What you add | Command |

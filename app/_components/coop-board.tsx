@@ -120,7 +120,7 @@ export function CoopBoard({
   return (
     <div className="flex flex-col gap-10">
       {firstRun ? (
-        <section className="flex flex-col gap-3 rounded border border-accent/25 bg-surface-raised p-4">
+        <section className="flex flex-col gap-3 rounded border border-accent/25 bg-surface-raised/80 p-4 backdrop-blur-md">
           <p className="text-sm text-muted">{copy.coop.firstRunDemoHint}</p>
           <button
             type="button"

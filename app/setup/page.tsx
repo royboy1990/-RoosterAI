@@ -83,7 +83,7 @@ export default async function SetupPage() {
         <p className="text-sm text-muted">{copy.setup.blurb}</p>
       </div>
 
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+      <section className="flex flex-col gap-3 rounded border border-border bg-surface/80 p-4 backdrop-blur-md">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-medium text-foreground">
             {copy.setup.keysHeading}
