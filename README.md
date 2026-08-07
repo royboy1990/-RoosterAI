@@ -319,6 +319,7 @@ Local **Wake the Flock Up** / `npm run wake` do not need this token.
 ## Config vs secrets
 
 - **Secrets** → `.env` only (gitignored). Dashboard shows set/missing for **installed** sources, never values, never accepts secret inputs.
+- **Secret scan** → `npm run check:secrets` (also runs on PR/push via GitHub Actions) looks for known token shapes so keys do not land in the tree.
 - **Preferences** → `rooster.config.json` (gitignored; copy from `rooster.config.example.json`, or let `/coop` create it). Sparse `connectors[]` — installed only. Model, delivery, timezone, schedule hint, and briefing prompts live on Settings.
 - **Timezone** → IANA string in config (e.g. `Asia/Jerusalem`). Used for the header clock, calendar “today”, and GA4 day boundaries. If still `UTC`, the dashboard adopts your browser zone once; Settings also has **Use browser timezone**.
 - **Local-only (never commit)** → `.env`, `rooster.config.json`, `data/`, `*ga4-service-account.json`, plus IDE agent files `AGENTS.md` / `CLAUDE.md`.
