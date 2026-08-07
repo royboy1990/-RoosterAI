@@ -15,6 +15,10 @@ No multi-tenant SaaS. No tracking. No subscription fees. Just a loud bird doing 
 └────────────────────────────────────────────┘
 ```
 
+[![RoosterAI – Open Source AI Morning Brief & Portfolio Health Dashboard](https://img.youtube.com/vi/5tprDtKMyB0/hqdefault.jpg)](https://youtube.com/shorts/5tprDtKMyB0)
+
+[Watch the Short on YouTube](https://youtube.com/shorts/5tprDtKMyB0)
+
 ## Under the hood / Dashboard
 
 You do not have to live in raw JSON. The local dashboard is the control surface — stock connectors, check key status, pick GA4 properties, tune prompts, and read the brief. Secrets stay in `.env`; preferences write to `rooster.config.json`.
@@ -22,7 +26,7 @@ You do not have to live in raw JSON. The local dashboard is the control surface 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <p><strong>Latest brief</strong> — action-first digest with urgent callouts, site tables, and a short Do Today list.</p>
+      <p><strong>Latest brief</strong> — action-first digest with urgent callouts, site tables, and a short Do Today list. Play a spoken version when TTS is enabled.</p>
       <img src="./public/screenshots/latest-brief.webp" alt="Latest brief dashboard with Attention Today callouts, GA4 tables, and Do Today list" />
     </td>
     <td width="50%" valign="top">
@@ -32,11 +36,11 @@ You do not have to live in raw JSON. The local dashboard is the control surface 
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <p><strong>Settings / keys</strong> — ready vs missing env status (never the values) and a GA4 property picker.</p>
+      <p><strong>Settings / keys</strong> — ready vs missing env status (never the values), GA4 property picker, and Audio (wake crow + spoken brief).</p>
       <img src="./public/screenshots/settings-keys.webp" alt="Settings page showing key readiness and GA4 property checkboxes" />
     </td>
     <td width="50%" valign="top">
-      <p><strong>Preferences</strong> — LLM provider/model, delivery channel, timezone, cron hint, and briefing prompts.</p>
+      <p><strong>Preferences</strong> — LLM provider/model, delivery, timezone, optional name for spoken greetings, cron hint, and briefing prompts.</p>
       <img src="./public/screenshots/preferences.webp" alt="Preferences form for LLM, delivery, timezone, and prompts" />
     </td>
   </tr>
@@ -75,6 +79,20 @@ Ambient morning radio behind the dashboard (dawn field + dock). Two compressed s
 Personal audio is not uploaded and is gitignored under `public/audio/*` (except the seed files and README). Keep files under ~25 MB each.
 
 See also [`public/audio/README.md`](./public/audio/README.md).
+
+## Spoken brief (TTS)
+
+Optional OpenAI speech so the Latest brief can be listened to on the dashboard (separate from Rooster FM beds).
+
+| What | Detail |
+|------|--------|
+| **Model** | `gpt-4o-mini-tts` via `POST /v1/audio/speech` |
+| **Key** | Same `OPENAI_API_KEY` — speech always hits `api.openai.com` (not a custom `OPENAI_BASE_URL` chat host) |
+| **When** | Settings → Audio: **each wake** (default) or **on demand** from the Latest play control |
+| **Voice** | 13 built-ins with in-settings preview; optional **Your name** for daypart greetings / sign-offs |
+| **Files** | `data/audio/<brief-id>.mp3` (gitignored, local only) |
+
+Wake still succeeds if TTS fails (logged; brief text delivery continues). Dashboard playback only for now — not Telegram voice.
 
 ## Onboarding ladder
 
@@ -295,6 +313,9 @@ Once this is set up, the app uses the JSON key to authenticate silently as the s
    sanitize + LLM  ──> terse executive brief
        │
        ▼
+   optional TTS    ──> data/audio/<id>.mp3 (OpenAI speech; fail-soft)
+       │
+       ▼
    Telegram / file ──> data/briefs/<timestamp>.json + phone
 ```
 
@@ -342,9 +363,9 @@ Local **Wake the Flock Up** / `npm run wake` do not need this token.
 
 - **Secrets** → `.env` only (gitignored). Dashboard shows set/missing for **installed** sources, never values, never accepts secret inputs.
 - **Secret scan** → `npm run check:secrets` (also runs on PR/push via GitHub Actions) looks for known token shapes so keys do not land in the tree.
-- **Preferences** → `rooster.config.json` (gitignored; copy from `rooster.config.example.json`, or let `/coop` create it). Sparse `connectors[]` — installed only. Model, delivery, timezone, schedule hint, and briefing prompts live on Settings.
-- **Timezone** → IANA string in config (e.g. `Asia/Jerusalem`). Used for the header clock, calendar “today”, and GA4 day boundaries. If still `UTC`, the dashboard adopts your browser zone once; Settings also has **Use browser timezone**.
-- **Local-only (never commit)** → `.env`, `rooster.config.json`, `data/`, `*ga4-service-account.json`, plus IDE agent files `AGENTS.md` / `CLAUDE.md`.
+- **Preferences** → `rooster.config.json` (gitignored; copy from `rooster.config.example.json`, or let `/coop` create it). Sparse `connectors[]` — installed only. Model, delivery, timezone, schedule hint, operator name, TTS prefs, and briefing prompts live on Settings.
+- **Timezone** → IANA string in config (e.g. `Asia/Jerusalem`). Used for the header clock, calendar “today”, GA4 day boundaries, and spoken daypart greetings. If still `UTC`, the dashboard adopts your browser zone once; Settings also has **Use browser timezone**.
+- **Local-only (never commit)** → `.env`, `rooster.config.json`, `data/` (briefs + spoken MP3s), `*ga4-service-account.json`, plus IDE agent files `AGENTS.md` / `CLAUDE.md`.
 
 ## A note from the coop
 
