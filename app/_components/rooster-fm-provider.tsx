@@ -25,9 +25,19 @@ const STORAGE_VOLUME = "rooster-fm-volume";
 const STORAGE_VISUALS = "rooster-fm-visuals";
 const STORAGE_HIDDEN_BUILTIN = "rooster-fm-hidden-builtin";
 const STORAGE_START_ON_LOAD = "rooster-fm-start-on-load";
+const STORAGE_POSITION = "rooster-fm-position";
 const DEFAULT_VOLUME = 0.5;
 const DUCK_LEVEL = 0.18;
 const UNDUCK_MS = 320;
+const POSITION_PERSIST_MS = 2000;
+/** Mid-track resume only for recent leaves (refresh / short break). Older → same track, start over. */
+const POSITION_RESUME_MAX_AGE_MS = 10 * 60 * 1000;
+
+type StoredPosition = {
+  trackId: string;
+  time: number;
+  savedAt: number;
+};
 
 interface RoosterFMContextValue {
   isPlaying: boolean;
@@ -116,6 +126,69 @@ function readStoredHiddenBuiltin(): string[] {
   }
 }
 
+function readStoredPosition(): StoredPosition | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_POSITION);
+    if (raw === null) {
+      return null;
+    }
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !("trackId" in parsed) ||
+      !("time" in parsed)
+    ) {
+      return null;
+    }
+    const trackId = (parsed as { trackId: unknown }).trackId;
+    const time = (parsed as { time: unknown }).time;
+    const savedAt = (parsed as { savedAt?: unknown }).savedAt;
+    if (typeof trackId !== "string" || typeof time !== "number") {
+      return null;
+    }
+    if (!Number.isFinite(time) || time < 0) {
+      return null;
+    }
+    // Missing/invalid savedAt → treat as stale (pre-TTL writes or corruption).
+    const at =
+      typeof savedAt === "number" && Number.isFinite(savedAt) ? savedAt : 0;
+    return { trackId, time, savedAt: at };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredPosition(position: StoredPosition): void {
+  try {
+    window.localStorage.setItem(STORAGE_POSITION, JSON.stringify(position));
+  } catch {
+    // Ignore quota / private mode failures.
+  }
+}
+
+function isFreshResume(position: StoredPosition): boolean {
+  return Date.now() - position.savedAt <= POSITION_RESUME_MAX_AGE_MS;
+}
+
+function applySeekWhenReady(audio: HTMLAudioElement, time: number): void {
+  const seek = () => {
+    const duration = audio.duration;
+    if (Number.isFinite(duration) && duration > 0) {
+      // Leave a hair before the end so `ended` still fires normally.
+      audio.currentTime = Math.min(time, Math.max(0, duration - 0.35));
+      return;
+    }
+    audio.currentTime = time;
+  };
+
+  if (audio.readyState >= 1) {
+    seek();
+    return;
+  }
+  audio.addEventListener("loadedmetadata", seek, { once: true });
+}
+
 function toFileArray(files: FileList | File[]): File[] {
   return Array.from(files);
 }
@@ -142,6 +215,8 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
   const startOnLoadRef = useRef(false);
   /** One-shot gate — must not re-fire after pause / playTrackAt identity churn. */
   const startOnLoadHandledRef = useRef(false);
+  /** Seek once after refresh restore; cleared when applied or skipped. */
+  const pendingSeekRef = useRef<number | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackIndex, setTrackIndex] = useState(0);
@@ -153,6 +228,8 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
   const [duckFactor, setDuckFactor] = useState(1);
   const [startOnLoad, setStartOnLoadState] = useState(false);
   const [prefsReady, setPrefsReady] = useState(false);
+  const [libraryReady, setLibraryReady] = useState(false);
+  const [resumeReady, setResumeReady] = useState(false);
   const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -297,6 +374,11 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setLibraryMessage("Could not load your local Rooster FM library.");
         }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLibraryReady(true);
+        }
       });
 
     return () => {
@@ -304,6 +386,40 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
       revokeObjectUrls();
     };
   }, [applyGain, applyLocalRecords, revokeObjectUrls]);
+
+  // Restore last track + scrub position once the playlist is known.
+  useEffect(() => {
+    if (!prefsReady || !libraryReady || resumeReady) {
+      return;
+    }
+
+    const visible = [
+      ...roosterFmPlaylist.filter(
+        (entry) => !hiddenBuiltinIds.includes(entry.id),
+      ),
+      ...localTracks,
+    ];
+    const stored = readStoredPosition();
+    if (stored) {
+      const idx = visible.findIndex((entry) => entry.id === stored.trackId);
+      if (idx >= 0) {
+        trackIndexRef.current = idx;
+        setTrackIndex(idx);
+        // Refresh / short break: resume scrub. Hours later: same track, from the top.
+        if (stored.time > 1 && isFreshResume(stored)) {
+          pendingSeekRef.current = stored.time;
+        }
+      }
+    }
+
+    setResumeReady(true);
+  }, [
+    prefsReady,
+    libraryReady,
+    resumeReady,
+    hiddenBuiltinIds,
+    localTracks,
+  ]);
 
   useEffect(() => {
     if (!prefsReady) {
@@ -368,6 +484,11 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
+      const resumeAt = pendingSeekRef.current;
+      if (resumeAt !== null) {
+        pendingSeekRef.current = null;
+      }
+
       if (
         audio.dataset.trackId !== nextTrack.id ||
         audio.getAttribute("src") !== nextTrack.src
@@ -375,8 +496,12 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
         audio.dataset.trackId = nextTrack.id;
         audio.src = nextTrack.src;
         audio.load();
-      } else {
-        audio.currentTime = 0;
+      }
+      // Same track: keep currentTime (refresh resume). Single-track next/prev
+      // restarts explicitly before calling playTrackAt.
+
+      if (resumeAt !== null && resumeAt > 0) {
+        applySeekWhenReady(audio, resumeAt);
       }
 
       const ok = await ensureGraph();
@@ -419,7 +544,52 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
         });
       }
     }
+
+    const resumeAt = pendingSeekRef.current;
+    if (resumeAt !== null && resumeAt > 0 && audio.dataset.trackId === trackId) {
+      pendingSeekRef.current = null;
+      applySeekWhenReady(audio, resumeAt);
+    }
   }, [trackId, trackSrc]);
+
+  // Persist scrub position so refresh can resume mid-track.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    let lastWrite = 0;
+    const persist = () => {
+      const id = audio.dataset.trackId;
+      if (!id) {
+        return;
+      }
+      const time = audio.currentTime;
+      if (!Number.isFinite(time) || time < 0) {
+        return;
+      }
+      writeStoredPosition({ trackId: id, time, savedAt: Date.now() });
+    };
+
+    const onTimeUpdate = () => {
+      const now = Date.now();
+      if (now - lastWrite < POSITION_PERSIST_MS) {
+        return;
+      }
+      lastWrite = now;
+      persist();
+    };
+
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("pause", persist);
+    window.addEventListener("pagehide", persist);
+    return () => {
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("pause", persist);
+      window.removeEventListener("pagehide", persist);
+    };
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -500,11 +670,27 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
     if (playlist.length === 0) {
       return;
     }
+    if (playlist.length === 1) {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+      }
+      void playTrackAt(trackIndexRef.current);
+      return;
+    }
     void playTrackAt(trackIndexRef.current + 1);
   }, [playTrackAt, playlist.length]);
 
   const prev = useCallback(() => {
     if (playlist.length === 0) {
+      return;
+    }
+    if (playlist.length === 1) {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+      }
+      void playTrackAt(trackIndexRef.current);
       return;
     }
     void playTrackAt(trackIndexRef.current - 1);
@@ -534,12 +720,13 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
   // Prefer autoplay on open; if the browser blocks it, start on the next gesture.
   // Do not depend on `playTrackAt` — it is recreated every render (fresh `playlist`
   // array) and was re-triggering play after pause (seek to 0 via playTrackAt).
+  // Wait for resumeReady so we seek mid-track before the first play attempt.
   useEffect(() => {
     if (!startOnLoad) {
       startOnLoadHandledRef.current = false;
       return;
     }
-    if (!prefsReady || startOnLoadHandledRef.current) {
+    if (!resumeReady || startOnLoadHandledRef.current) {
       return;
     }
     if (playlist.length === 0) {
@@ -595,7 +782,7 @@ export function RoosterFMProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       detach();
     };
-  }, [prefsReady, startOnLoad, playlist.length]);
+  }, [resumeReady, startOnLoad, playlist.length]);
 
   const addLocalFiles = useCallback(
     async (files: FileList | File[]) => {

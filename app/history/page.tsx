@@ -2,18 +2,28 @@ import Link from "next/link";
 import { formatBriefTime, formatDayHeading, dayKey } from "@/app/_lib/format";
 import { copy } from "@/src/copy";
 import { resolveRootDir } from "@/src/core/config";
-import { listBriefIds, readBrief } from "@/src/core/store";
+import {
+  listBriefIds,
+  readBrief,
+  resolveSubstantiveBrief,
+} from "@/src/core/store";
 import type { BriefRecord } from "@/src/core/types";
 
 export default async function HistoryPage() {
   const rootDir = resolveRootDir();
   const ids = await listBriefIds(rootDir);
   const briefs: BriefRecord[] = [];
+  const previewById = new Map<string, string>();
 
   for (const id of ids) {
     const brief = await readBrief(rootDir, id);
     if (brief) {
       briefs.push(brief);
+      const body = await resolveSubstantiveBrief(rootDir, brief);
+      previewById.set(
+        brief.id,
+        body.text.replace(/^\[DEMO\]\n?/, "").slice(0, 160),
+      );
     }
   }
 
@@ -65,9 +75,15 @@ export default async function HistoryPage() {
                         {copy.history.demoTag}
                       </span>
                     ) : null}
+                    {brief.wakeMode === "unchanged" ? (
+                      <span className="metric-mono rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-muted">
+                        {copy.history.unchangedTag}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="line-clamp-2 text-sm text-muted">
-                    {brief.text.replace(/^\[DEMO\]\n?/, "").slice(0, 160)}
+                    {previewById.get(brief.id) ??
+                      brief.text.replace(/^\[DEMO\]\n?/, "").slice(0, 160)}
                   </p>
                 </Link>
               </li>

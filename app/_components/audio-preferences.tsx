@@ -48,7 +48,7 @@ export function AudioPreferences({ wakeSound }: { wakeSound: boolean }) {
                 }
               });
             }}
-            className="mt-1"
+            className="mt-1 accent-[var(--accent)]"
           />
           <span className="flex flex-col gap-1">
             <span className="font-medium text-foreground">
@@ -63,7 +63,7 @@ export function AudioPreferences({ wakeSound }: { wakeSound: boolean }) {
             type="checkbox"
             checked={startOnLoad}
             onChange={(event) => setStartOnLoad(event.target.checked)}
-            className="mt-1"
+            className="mt-1 accent-[var(--accent)]"
           />
           <span className="flex flex-col gap-1">
             <span className="font-medium text-foreground">

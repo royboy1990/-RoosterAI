@@ -68,11 +68,15 @@ export const copy = {
     errorDetailsSummary: "Show real error",
     llmFallback:
       "The LLM call failed — you got the raw sanitized digest instead.",
+    /** Muted line when Latest is an unchanged pointer; body below is the prior brief. */
+    unchangedNotice: (when: string) =>
+      `Nothing new since ${when}. Showing the last brief below.`,
   },
   history: {
     title: "History",
     empty: "No briefs in the archive yet.",
     demoTag: "DEMO",
+    unchangedTag: "UNCHANGED",
   },
   coop: {
     title: "Stock the Coop",
@@ -246,6 +250,20 @@ export const copy = {
   },
   emptyCoopPipeline: "The coop is empty — no installed sources to gather.",
   skippedLlmEmpty: "LLM skipped — nothing to summarize.",
+  /** Delivered when today's digest matches the usable baseline. */
+  wakeUnchanged: (when: string) =>
+    `Nothing new since ${when}. Last brief still stands.`,
+  wakeModeFull: "Wake mode: full (no usable baseline).",
+  wakeModeDiff: (baselineId: string) =>
+    `Wake mode: diff (vs ${baselineId}).`,
+  wakeModeUnchanged: (baselineId: string) =>
+    `Wake mode: unchanged (vs ${baselineId}) — skipping LLM.`,
+  /**
+   * Appended to the system prompt in diff mode only.
+   * Memory is continuity context; today's digest is authoritative.
+   */
+  briefMemoryRule:
+    "The \"## Memory\" section is prior-run continuity only. Today's data sections win if anything conflicts. Do not invent items that appear only as removed.",
   /** System prompt for the briefing LLM — factual, not rooster-voiced. */
   briefSystemPrompt: `You are a morning briefing assistant. Produce a terse, scannable executive summary from the provided data sections.
 

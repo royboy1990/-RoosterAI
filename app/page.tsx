@@ -6,7 +6,7 @@ import { WakeButton } from "@/app/_components/wake-button";
 import { formatBriefTime } from "@/app/_lib/format";
 import { copy } from "@/src/copy";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
-import { readLatestBrief } from "@/src/core/store";
+import { readLatestBrief, resolveSubstantiveBrief } from "@/src/core/store";
 
 export default async function HomePage() {
   const rootDir = resolveRootDir();
@@ -30,6 +30,10 @@ export default async function HomePage() {
     );
   }
 
+  const bodyBrief = await resolveSubstantiveBrief(rootDir, brief);
+  const showingPrior =
+    brief.wakeMode === "unchanged" && bodyBrief.id !== brief.id;
+
   return (
     <main className="flex flex-col gap-6">
       {runningDefaults ? <DefaultsBanner /> : null}
@@ -41,12 +45,19 @@ export default async function HomePage() {
         <p className="metric-mono text-xs text-muted">
           {formatBriefTime(brief.createdAt, brief.timezone)} · {brief.id}
         </p>
+        {showingPrior ? (
+          <p className="text-sm text-muted">
+            {copy.latest.unchangedNotice(
+              formatBriefTime(bodyBrief.createdAt, bodyBrief.timezone),
+            )}
+          </p>
+        ) : null}
       </div>
 
-      {brief.demo ? <DemoBanner /> : null}
+      {bodyBrief.demo ? <DemoBanner /> : null}
 
       <article className="brief-prose rounded border border-border bg-surface/80 px-4 py-4 text-[15px] text-foreground backdrop-blur-md">
-        <BriefProse text={brief.text} />
+        <BriefProse text={bodyBrief.text} />
       </article>
 
       <OutcomeList

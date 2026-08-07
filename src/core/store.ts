@@ -67,6 +67,29 @@ export async function readLatestBrief(
   return readBrief(rootDir, ids[0]!);
 }
 
+/**
+ * Follow unchanged → baselineBriefId until a brief with real body text.
+ * Double-wakes leave pointer stubs; Latest should still show the last real brief.
+ */
+export async function resolveSubstantiveBrief(
+  rootDir: string,
+  brief: BriefRecord,
+): Promise<BriefRecord> {
+  let current = brief;
+  const seen = new Set<string>([current.id]);
+
+  while (current.wakeMode === "unchanged" && current.baselineBriefId) {
+    const next = await readBrief(rootDir, current.baselineBriefId);
+    if (!next || seen.has(next.id)) {
+      break;
+    }
+    seen.add(next.id);
+    current = next;
+  }
+
+  return current;
+}
+
 export async function appendLog(
   rootDir: string,
   message: string,

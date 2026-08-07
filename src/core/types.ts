@@ -80,6 +80,9 @@ export interface ConnectorOutcome {
   error?: string;
 }
 
+/** How this wake chose to summarize relative to a prior brief. */
+export type WakeMode = "full" | "diff" | "unchanged";
+
 export interface BriefRecord {
   /** Filesystem-safe ISO timestamp used as the filename stem. */
   id: string;
@@ -97,4 +100,8 @@ export interface BriefRecord {
   deliveryChannelId: string;
   llmFailed?: boolean;
   llmError?: string;
+  /** Auto-picked from digest vs latest usable prior brief. */
+  wakeMode?: WakeMode;
+  /** Prior brief used for diff / unchanged; omitted on full. */
+  baselineBriefId?: string;
 }
