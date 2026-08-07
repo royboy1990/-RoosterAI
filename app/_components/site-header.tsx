@@ -6,6 +6,7 @@ import {
   coopStatusLabel,
   formatHeaderTime,
 } from "@/app/_lib/format";
+import { RoosterFmHeaderButton } from "@/app/_components/rooster-fm-dock";
 import { WakeButton } from "@/app/_components/wake-provider";
 
 export function SiteHeader({
@@ -20,15 +21,24 @@ export function SiteHeader({
   const time = formatHeaderTime(now, timezone);
 
   return (
-    <header className="border-b border-border bg-surface">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <header className="sticky top-0 z-30 border-b border-border bg-surface/90 backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0 flex flex-col gap-2">
-          <div className="flex min-w-0 flex-wrap items-baseline gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2.5">
             <Link
               href="/"
-              className="text-lg font-semibold tracking-tight text-accent"
+              className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-accent"
             >
-              {copy.brand}
+              {/* Black plate on the PNG; screen blend lifts the bird on dark chrome. */}
+              <img
+                src="/rooster-mark.png"
+                alt=""
+                width={36}
+                height={36}
+                className="size-9 shrink-0 object-contain mix-blend-screen"
+                aria-hidden
+              />
+              <span>{copy.brand}</span>
             </Link>
             <p className="metric-mono min-w-0 text-xs text-muted">
               [{time}] · {copy.coopStatus.label}:{" "}
@@ -54,7 +64,8 @@ export function SiteHeader({
             </Link>
           </nav>
         </div>
-        <div className="min-w-0 sm:min-w-[220px]">
+        <div className="flex shrink-0 flex-nowrap items-center gap-2 self-start sm:self-center">
+          <RoosterFmHeaderButton />
           <WakeButton />
         </div>
       </div>

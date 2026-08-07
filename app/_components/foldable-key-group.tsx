@@ -17,13 +17,13 @@ export function FoldableKeyGroup({
 
   return (
     <details
-      className="group/keys flex flex-col gap-1.5"
+      className="group/keys"
       open={open}
       onToggle={(event) => {
         setOpen(event.currentTarget.open);
       }}
     >
-      <summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-2 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
         <div className="flex min-w-0 items-center gap-2">
           <svg
             viewBox="0 0 16 16"
@@ -43,7 +43,7 @@ export function FoldableKeyGroup({
         </div>
         {trailing}
       </summary>
-      {children}
+      <div className="pt-1.5">{children}</div>
     </details>
   );
 }

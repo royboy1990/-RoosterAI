@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { listGa4Properties, saveGa4Properties } from "@/app/actions";
 import type { ActionResult } from "@/app/_lib/action-result";
 import { ErrorDetails } from "@/app/_components/error-details";
+import { SettingsSectionFold } from "@/app/_components/settings-section-fold";
 import { copy } from "@/src/copy";
 import type { Ga4PropertyInfo } from "@/src/core/connectors/ga4-shared";
 
@@ -40,7 +41,39 @@ function groupByAccount(properties: Ga4PropertyInfo[]): AccountGroup[] {
   return [...map.values()];
 }
 
+function Ga4Shell({
+  embedded,
+  defaultOpen,
+  summary,
+  children,
+}: {
+  embedded: boolean;
+  defaultOpen: boolean;
+  summary: ReactNode;
+  children: ReactNode;
+}) {
+  if (embedded) {
+    return (
+      <section className="flex flex-col gap-4 rounded border border-accent/25 bg-surface-raised/80 p-4 backdrop-blur-md">
+        {children}
+      </section>
+    );
+  }
+
+  return (
+    <SettingsSectionFold
+      title={copy.ga4.heading}
+      summary={summary}
+      defaultOpen={defaultOpen}
+      className="border-accent/25 bg-surface-raised/80"
+    >
+      {children}
+    </SettingsSectionFold>
+  );
+}
+
 export function Ga4PropertyPicker(props: Ga4PropertyPickerProps) {
+  const embedded = props.embedded ?? false;
   const [properties, setProperties] = useState(props.initialProperties);
   const [selectedIds, setSelectedIds] = useState(
     () => new Set(props.initialSelectedIds),
@@ -60,14 +93,25 @@ export function Ga4PropertyPicker(props: Ga4PropertyPickerProps) {
     return map;
   }, [properties]);
 
+  const needsAttention =
+    !props.credentialsReady ||
+    props.initialSelectedIds.length === 0 ||
+    Boolean(props.initialError);
+
   if (!props.credentialsReady) {
     return (
-      <section className="flex flex-col gap-2 rounded border border-border bg-surface p-4">
-        <h2 className="text-lg font-medium text-foreground">
-          {copy.ga4.heading}
-        </h2>
+      <Ga4Shell
+        embedded={embedded}
+        defaultOpen
+        summary={copy.ga4.foldNeedsSetup}
+      >
+        {embedded ? (
+          <h2 className="text-lg font-medium text-foreground">
+            {copy.ga4.heading}
+          </h2>
+        ) : null}
         <p className="text-sm text-muted">{copy.ga4.credentialsMissing}</p>
-      </section>
+      </Ga4Shell>
     );
   }
 
@@ -94,14 +138,18 @@ export function Ga4PropertyPicker(props: Ga4PropertyPickerProps) {
     setSaveResult(null);
   };
 
-  return (
-    <section className="flex flex-col gap-4 rounded border border-accent/25 bg-surface-raised p-4">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-medium text-foreground">
-          {copy.ga4.heading}
-        </h2>
+  const body = (
+    <>
+      {embedded ? (
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-medium text-foreground">
+            {copy.ga4.heading}
+          </h2>
+          <p className="text-sm text-muted">{copy.ga4.blurb}</p>
+        </div>
+      ) : (
         <p className="text-sm text-muted">{copy.ga4.blurb}</p>
-      </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="metric-mono text-xs text-muted">
@@ -157,7 +205,10 @@ export function Ga4PropertyPicker(props: Ga4PropertyPickerProps) {
 
       <div className="flex max-h-80 flex-col gap-4 overflow-y-auto pr-1">
         {groups.map((group) => (
-          <div key={group.accountId || group.accountName} className="flex flex-col gap-2">
+          <div
+            key={group.accountId || group.accountName}
+            className="flex flex-col gap-2"
+          >
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
               {copy.ga4.accountLabel} · {group.accountName}
               {group.accountId ? (
@@ -240,6 +291,20 @@ export function Ga4PropertyPicker(props: Ga4PropertyPickerProps) {
           ) : null}
         </div>
       ) : null}
-    </section>
+    </>
+  );
+
+  return (
+    <Ga4Shell
+      embedded={embedded}
+      defaultOpen={needsAttention}
+      summary={
+        selectedIds.size > 0
+          ? copy.ga4.foldReady(selectedIds.size)
+          : copy.ga4.foldNeedsSetup
+      }
+    >
+      {body}
+    </Ga4Shell>
   );
 }

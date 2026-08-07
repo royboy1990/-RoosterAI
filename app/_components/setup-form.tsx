@@ -64,7 +64,7 @@ export function SetupForm(props: SetupFormProps) {
             const checked = props.selectedConnectorIds.includes(connector.id);
             return (
               <li key={connector.id}>
-                <label className="flex cursor-pointer gap-3 rounded border border-border bg-surface px-3 py-3 text-sm">
+                <label className="flex cursor-pointer gap-3 rounded border border-border bg-surface/80 px-3 py-3 text-sm backdrop-blur-md">
                   <input
                     type="checkbox"
                     name="connector"

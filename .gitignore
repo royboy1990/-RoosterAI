@@ -50,3 +50,10 @@ next-env.d.ts
 
 # ga4 service account
 *ga4-service-account.json
+
+# Personal Rooster FM uploads — keep out of git. Seed beds stay tracked.
+/public/audio/*
+!/public/audio/.gitkeep
+!/public/audio/README.md
+!/public/audio/A_Room_at_Daybreak.mp3
+!/public/audio/Window_Seat_Sunrise.mp3

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AmbientCanvas } from "@/app/_components/ambient-canvas";
+import { RoosterFmDock } from "@/app/_components/rooster-fm-dock";
+import { RoosterFMProvider } from "@/app/_components/rooster-fm-provider";
 import { SiteHeader } from "@/app/_components/site-header";
 import { TimezoneBootstrap } from "@/app/_components/timezone-bootstrap";
 import {
@@ -43,18 +46,22 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <WakeProvider wakeSound={loaded.config.wakeSound}>
-          <TimezoneBootstrap timezone={timezone} />
-          <SiteHeader
-            status={latest?.status ?? null}
-            timezone={timezone}
-            now={new Date()}
-          />
-          <WakeResultBanner />
-          <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-1 flex-col px-6 py-8">
-            {children}
-          </div>
-        </WakeProvider>
+        <RoosterFMProvider>
+          <WakeProvider wakeSound={loaded.config.wakeSound}>
+            <AmbientCanvas />
+            <TimezoneBootstrap timezone={timezone} />
+            <SiteHeader
+              status={latest?.status ?? null}
+              timezone={timezone}
+              now={new Date()}
+            />
+            <WakeResultBanner />
+            <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-3xl flex-1 flex-col px-6 py-8 pb-28">
+              {children}
+            </div>
+            <RoosterFmDock />
+          </WakeProvider>
+        </RoosterFMProvider>
       </body>
     </html>
   );

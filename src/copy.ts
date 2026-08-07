@@ -142,9 +142,19 @@ export const copy = {
     keysDocHint: "See `.env.example` for the tiered setup ladder.",
     keysEmpty:
       "No connector keys to show — install sources in the Coop first.",
+    keysFoldEmpty: "Nothing installed",
+    keysFoldReady: (n: number) =>
+      n === 1 ? "1 source ready" : `${n} sources ready`,
+    keysFoldAttention: (n: number) =>
+      n === 1 ? "1 needs attention" : `${n} need attention`,
     preferencesHeading: "Preferences",
     preferencesBlurb:
       "Model, delivery, timezone, and briefing prompts. Sources are stocked in the Coop. Saved to `rooster.config.json`.",
+    audioHeading: "Audio",
+    audioBlurb:
+      "Wake crow and Rooster FM defaults. Personal tracks stay in the dock.",
+    audioSaved: "Audio preference roosted.",
+    audioSaveFailed: "Could not save audio preference.",
     timezone: "Timezone",
     timezoneHint:
       "IANA zone used for the clock, calendar “today”, and GA4 day boundaries. Leave as UTC and the dashboard will pick up your browser zone once.",
@@ -157,6 +167,11 @@ export const copy = {
     wakeSound: "Wake crow",
     wakeSoundHint:
       "Play the crow when Wake the Flock Up finishes successfully.",
+    startMusicOnLoad: "Start Rooster FM when the app loads",
+    startMusicOnLoadHint:
+      "Starts after you open the app. Most browsers need one click anywhere first.",
+    libraryDockHint:
+      "Add, drop, or remove tracks from the Rooster FM dock.",
     connectorsHeading: "Connectors",
     connectorsManagedInCoop: "Stock and mute sources in the Coop.",
     openCoop: "Open the Coop",
@@ -187,6 +202,25 @@ export const copy = {
     successAfter: ".",
     failed: "Wake failed.",
   },
+  roosterFm: {
+    label: "Rooster FM",
+    idleTrack: "Morning bed",
+    play: "Play",
+    pause: "Pause",
+    next: "Next track",
+    prev: "Previous track",
+    volume: "Volume",
+    visualsOn: "Visuals on",
+    visualsOff: "Visuals off",
+    playGlyph: "▶",
+    pauseGlyph: "❚❚",
+    addTracks: "Add",
+    removeTrack: "Remove",
+    restoreSeed: "Restore seeds",
+    dropHint: "Drop audio to add…",
+    libraryHint:
+      "Personal tracks stay in this browser only. Remove hides a seed from your player (file stays in the project).",
+  },
   ga4: {
     heading: "Google Analytics properties",
     blurb:
@@ -197,6 +231,9 @@ export const copy = {
     loadFailedHint:
       "Enable the Google Analytics Admin API on the GCP project that owns this key, then refresh.",
     empty: "No GA4 properties visible to this service account.",
+    foldReady: (n: number) =>
+      n === 1 ? "1 property selected" : `${n} properties selected`,
+    foldNeedsSetup: "Needs setup",
     accountLabel: "Account",
     selectAll: "Select all",
     selectNone: "Select none",

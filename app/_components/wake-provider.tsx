@@ -12,6 +12,7 @@ import Link from "next/link";
 import { wakeTheFlock } from "@/app/actions";
 import type { ActionResult } from "@/app/_lib/action-result";
 import { ErrorDetails } from "@/app/_components/error-details";
+import { useRoosterFMOptional } from "@/app/_components/rooster-fm-provider";
 import { copy } from "@/src/copy";
 
 type WakePhase = "idle" | "gather" | "llm";
@@ -26,13 +27,39 @@ interface WakeContextValue {
 const WakeContext = createContext<WakeContextValue | null>(null);
 
 /** Unlock audio during the click gesture so we can crow when delivery finishes. */
-function prepareCrow(): { playWhenReady: () => void } {
+function prepareCrow(options: {
+  duck: () => void;
+  unduck: () => void;
+}): { playWhenReady: () => void } {
   const crow = new Audio("/sounds/wake-the-flock-up.mp3");
   crow.preload = "auto";
   crow.muted = true;
 
   let unlocked = false;
   let wantsPlay = false;
+  let ducked = false;
+
+  const releaseDuck = () => {
+    if (!ducked) {
+      return;
+    }
+    ducked = false;
+    options.unduck();
+  };
+
+  crow.addEventListener("ended", releaseDuck);
+  crow.addEventListener("error", releaseDuck);
+
+  const startCrow = () => {
+    crow.muted = false;
+    crow.currentTime = 0;
+    options.duck();
+    ducked = true;
+    void crow.play().catch(() => {
+      // Browser may still block; wake result still shows.
+      releaseDuck();
+    });
+  };
 
   void crow
     .play()
@@ -43,7 +70,7 @@ function prepareCrow(): { playWhenReady: () => void } {
       unlocked = true;
       if (wantsPlay) {
         wantsPlay = false;
-        void crow.play().catch(() => undefined);
+        startCrow();
       }
     })
     .catch(() => {
@@ -51,7 +78,7 @@ function prepareCrow(): { playWhenReady: () => void } {
       unlocked = true;
       if (wantsPlay) {
         wantsPlay = false;
-        void crow.play().catch(() => undefined);
+        startCrow();
       }
     });
 
@@ -61,11 +88,7 @@ function prepareCrow(): { playWhenReady: () => void } {
         wantsPlay = true;
         return;
       }
-      crow.muted = false;
-      crow.currentTime = 0;
-      void crow.play().catch(() => {
-        // Browser may still block; wake result still shows.
-      });
+      startCrow();
     },
   };
 }
@@ -77,6 +100,9 @@ export function WakeProvider({
   children: ReactNode;
   wakeSound?: boolean;
 }) {
+  const fm = useRoosterFMOptional();
+  const duck = fm?.duck ?? (() => undefined);
+  const unduck = fm?.unduck ?? (() => undefined);
   const [isPending, startTransition] = useTransition();
   const [phase, setPhase] = useState<WakePhase>("idle");
   const [result, setResult] = useState<ActionResult | null>(null);
@@ -92,7 +118,7 @@ export function WakeProvider({
   }, [isPending]);
 
   const wake = (options: { demo?: boolean } = {}): void => {
-    const crow = wakeSound ? prepareCrow() : null;
+    const crow = wakeSound ? prepareCrow({ duck, unduck }) : null;
 
     setResult(null);
     startTransition(async () => {
@@ -148,7 +174,7 @@ export function WakeResultBanner() {
   }
 
   return (
-    <div className="border-b border-border bg-surface">
+    <div className="relative z-10 border-b border-border bg-surface/80 backdrop-blur-md">
       <div className="mx-auto w-full min-w-0 max-w-3xl px-6 py-3 text-sm">
         {result.ok ? (
           <p className="text-ok">
