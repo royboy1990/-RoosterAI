@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SHOWCASE_DEMO_LINES } from "../demo/showcase-brief";
 import type { Connector, ConnectorResult, RunContext } from "../types";
 
 const demoConfigSchema = z.object({}).passthrough();
@@ -20,16 +21,7 @@ export const demoConnector: Connector<DemoConfig> = {
   async fetch(_config: DemoConfig, _ctx: RunContext): Promise<ConnectorResult> {
     return {
       heading: "Demo Farm",
-      lines: [
-        "Sessions yesterday: 1,284 (↑ 12% vs prior day)",
-        "Top landing page: /pricing (318 sessions)",
-        "Bounce rate: 41%",
-        "Unread mail: 3",
-        "From alex@client.co — Re: Q3 proposal — needs reply",
-        "From billing@host — Invoice #4412 due Friday",
-        "From noreply@saas — Your weekly digest (noise)",
-        "Open tasks: 2 overdue (Ship connector docs, Renew domain)",
-      ],
+      lines: [...SHOWCASE_DEMO_LINES],
     };
   },
 };

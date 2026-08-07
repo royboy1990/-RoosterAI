@@ -60,6 +60,16 @@ Open [http://localhost:3000](http://localhost:3000). First run lands on **Stock 
 
 Primary action everywhere: **Wake the Flock Up** (`npm run wake`).
 
+For screenshots / marketing without running connectors, seed the polished showcase brief anytime:
+
+```bash
+npm run demo:showcase
+# or without the [DEMO] banner:
+npm run demo:showcase -- --clean-label
+```
+
+Then open Latest on the dashboard.
+
 ## Rooster FM
 
 Ambient morning radio behind the dashboard (dawn field + dock). Two compressed seed tracks ship with the repo so playback works out of the box.

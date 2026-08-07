@@ -1,47 +1,22 @@
 import type { LlmCompleteInput, LlmProvider, RunContext } from "../types";
+import { SHOWCASE_BRIEF_TEXT } from "../demo/showcase-brief";
 
 /**
- * Formats a readable brief without calling an API.
- * Used by --demo and offline tests via config provider id "stub".
+ * Offline brief writer for --demo (provider id "stub").
+ * Returns the polished showcase brief so Tier 0 / marketing always look useful.
  */
 export const stubProvider: LlmProvider = {
   id: "stub",
   label: "Stub (offline)",
-  description: "Formats a readable brief without calling an API.",
+  description: "Polished offline showcase brief — no API calls.",
   tags: ["dev"],
   setupDocs: "README.md",
   defaultModel: "stub",
   requiredEnv: [],
   async complete(
-    input: LlmCompleteInput,
+    _input: LlmCompleteInput,
     _ctx: RunContext,
   ): Promise<string> {
-    const sections = input.user
-      .split(/^## /m)
-      .map((block) => block.trim())
-      .filter(Boolean)
-      .map((block) => {
-        const [first, ...rest] = block.split("\n");
-        const heading = (first ?? "Section").trim();
-        const lines = rest.map((l) => l.trim()).filter(Boolean);
-        return { heading, lines };
-      });
-
-    const parts: string[] = ["Morning brief (stub summary)", ""];
-
-    for (const section of sections) {
-      parts.push(`${section.heading}`);
-      if (section.lines.length === 0) {
-        parts.push("- Nothing new here.");
-      } else {
-        for (const line of section.lines) {
-          parts.push(`- ${line}`);
-        }
-      }
-      parts.push("");
-    }
-
-    parts.push("Action: triage unread mail and overdue tasks first.");
-    return parts.join("\n").trim();
+    return SHOWCASE_BRIEF_TEXT.trim();
   },
 };
