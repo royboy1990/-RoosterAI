@@ -190,6 +190,8 @@ export function RoosterFmDock() {
   } = useRoosterFM();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
@@ -199,6 +201,75 @@ export function RoosterFmDock() {
     const timer = window.setTimeout(() => clearLibraryMessage(), 4200);
     return () => window.clearTimeout(timer);
   }, [libraryMessage, clearLibraryMessage]);
+
+  // Space / arrows (and media keys) — skip when typing or adjusting a form control.
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+      const tag = target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+        return true;
+      }
+      return target.isContentEditable;
+    };
+
+    const bumpVolume = (delta: number) => {
+      const nextVolume = Math.min(1, Math.max(0, volumeRef.current + delta));
+      volumeRef.current = nextVolume;
+      setVolume(nextVolume);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      switch (event.key) {
+        case " ":
+        case "MediaPlayPause":
+          if (event.repeat) {
+            return;
+          }
+          event.preventDefault();
+          toggle();
+          break;
+        case "ArrowRight":
+        case "MediaTrackNext":
+          if (event.repeat) {
+            return;
+          }
+          event.preventDefault();
+          next();
+          break;
+        case "ArrowLeft":
+        case "MediaTrackPrevious":
+          if (event.repeat) {
+            return;
+          }
+          event.preventDefault();
+          prev();
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          bumpVolume(0.05);
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          bumpVolume(-0.05);
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggle, next, prev, setVolume]);
 
   const title = track?.title ?? copy.roosterFm.idleTrack;
   const artist = track?.artist ?? copy.brand;

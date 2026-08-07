@@ -298,6 +298,8 @@ Once this is set up, the app uses the JSON key to authenticate silently as the s
    Telegram / file ──> data/briefs/<timestamp>.json + phone
 ```
 
+After gathering, Rooster compares today’s digest to the last usable brief — unchanged mornings skip the LLM; otherwise the model still writes a full morning brief (with a short memory packet when something moved). Handy if you Wake more than once a day: you still get a morning brief, not a rewrite of the same digest.
+
 Core lives in `src/core/**` as pure TypeScript (no Next.js imports), so crontab can run `npm run wake` with no server. The dashboard imports the same code.
 
 The Latest page renders the brief as a small safe dialect (headings, bold, lists, `!!!` urgent callouts, markdown tables) — not free-form HTML. The system prompt lists what the model may use.

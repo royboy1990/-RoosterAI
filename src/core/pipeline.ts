@@ -2,6 +2,7 @@ import { copy } from "../copy";
 import type { LoadedConfig } from "./config";
 import { getDeliveryChannel } from "./delivery";
 import { getLlmProvider } from "./llm";
+import { resolveWakeDecision } from "./memory";
 import {
   isActive,
   isNeedsKeys,
@@ -16,6 +17,7 @@ import type {
   ConnectorResult,
   CoopStatus,
   RunContext,
+  WakeMode,
 } from "./types";
 
 function missingEnv(
@@ -220,6 +222,23 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     throw new Error(`Unknown LLM provider "${config.llm.provider}"`);
   }
 
+  const wake = await resolveWakeDecision({
+    rootDir,
+    demo: config.demo,
+    digest,
+    now,
+  });
+  const wakeMode: WakeMode = wake.mode;
+  const baselineBriefId = wake.baseline?.id;
+
+  if (wakeMode === "full") {
+    log(copy.wakeModeFull);
+  } else if (wakeMode === "diff" && baselineBriefId) {
+    log(copy.wakeModeDiff(baselineBriefId));
+  } else if (wakeMode === "unchanged" && baselineBriefId) {
+    log(copy.wakeModeUnchanged(baselineBriefId));
+  }
+
   const llmMissing = missingEnv(llm.requiredEnv, loaded.env);
   let text: string;
   let llmFailed = false;
@@ -228,7 +247,9 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
   // Skip the LLM when there is nothing to summarize (empty coop / all needsKeys / all failed).
   const skipLlm = okResults.length === 0;
 
-  if (skipLlm) {
+  if (wakeMode === "unchanged" && wake.baseline) {
+    text = copy.wakeUnchanged(wake.baseline.createdAt);
+  } else if (skipLlm) {
     text = digest;
     log(copy.skippedLlmEmpty);
   } else if (llmMissing.length > 0) {
@@ -238,12 +259,20 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     log(`LLM skipped (${llmError}); delivering raw digest`);
   } else {
     log(copy.pendingLlm);
-    const system =
+    const baseSystem =
       config.prompts.system?.trim() || copy.briefSystemPrompt;
+    const system =
+      wakeMode === "diff"
+        ? `${baseSystem}\n\n${copy.briefMemoryRule}`
+        : baseSystem;
     const overview = config.prompts.overview.trim();
+    const digestBlock =
+      wakeMode === "diff" && wake.memoryPacket
+        ? `${wake.memoryPacket}\n\n---\n\n${digest}`
+        : digest;
     const user = overview
-      ? `${overview}\n\n---\n\n${digest}`
-      : digest;
+      ? `${overview}\n\n---\n\n${digestBlock}`
+      : digestBlock;
     try {
       text = await llm.complete(
         {
@@ -290,6 +319,8 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     deliveryChannelId: delivery.id,
     llmFailed: llmFailed || undefined,
     llmError,
+    wakeMode,
+    baselineBriefId,
   };
 
   await delivery.deliver({ text, brief }, ctx);
