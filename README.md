@@ -15,7 +15,7 @@ No multi-tenant SaaS. No tracking. No subscription fees. Just a loud bird doing 
 └────────────────────────────────────────────┘
 ```
 
-[![RoosterAI – Open Source AI Morning Brief & Portfolio Health Dashboard](https://img.youtube.com/vi/5tprDtKMyB0/hqdefault.jpg)](https://youtube.com/shorts/5tprDtKMyB0)
+[![RoosterAI – Open Source AI Morning Brief & Portfolio Health Dashboard](./public/screenshots/demo-video.webp)](https://youtube.com/shorts/5tprDtKMyB0)
 
 [Watch the Short on YouTube](https://youtube.com/shorts/5tprDtKMyB0)
 
