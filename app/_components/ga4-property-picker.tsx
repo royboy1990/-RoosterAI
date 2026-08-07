@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { listGa4Properties, saveGa4Properties } from "@/app/actions";
 import type { ActionResult } from "@/app/_lib/action-result";
 import { ErrorDetails } from "@/app/_components/error-details";
+import { SettingsAnalyticsIcon } from "@/app/_components/settings-section-icons";
 import { SettingsSectionFold } from "@/app/_components/settings-section-fold";
 import { copy } from "@/src/copy";
 import type { Ga4PropertyInfo } from "@/src/core/connectors/ga4-shared";
@@ -63,6 +64,7 @@ function Ga4Shell({
   return (
     <SettingsSectionFold
       title={copy.ga4.heading}
+      icon={<SettingsAnalyticsIcon />}
       summary={summary}
       defaultOpen={defaultOpen}
       className="border-accent/25 bg-surface-raised/80"

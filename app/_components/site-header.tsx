@@ -6,7 +6,7 @@ import {
   coopStatusLabel,
   formatHeaderTime,
 } from "@/app/_lib/format";
-import { WakeButton } from "@/app/_components/wake-provider";
+import { HeaderPrimaryAction } from "@/app/_components/header-primary-action";
 
 export function SiteHeader({
   status,
@@ -64,7 +64,7 @@ export function SiteHeader({
           </nav>
         </div>
         <div className="flex shrink-0 flex-nowrap items-center gap-2 self-start sm:self-center">
-          <WakeButton />
+          <HeaderPrimaryAction />
         </div>
       </div>
     </header>

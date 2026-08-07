@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { saveConfig } from "@/app/actions";
 import type { ActionResult } from "@/app/_lib/action-result";
 import { ErrorDetails } from "@/app/_components/error-details";
+import { usePreferencesSave } from "@/app/_components/preferences-save-context";
 import { copy } from "@/src/copy";
+import { OPERATOR_NAME_MAX } from "@/src/core/tts/voices";
 import {
   PROMPT_MAX_CHARS,
   type PromptHistoryEntry,
@@ -20,6 +22,7 @@ export interface LlmProviderOption {
 
 export interface PreferencesFormProps {
   timezone: string;
+  operatorName: string;
   scheduleHint: string;
   llmProvider: string;
   llmModel: string;
@@ -42,34 +45,146 @@ function historyLabel(entry: PromptHistoryEntry): string {
   return `${stamp} — ${preview}${preview.length >= 48 ? "…" : ""}`;
 }
 
+interface PrefsSnapshot {
+  llmProvider: string;
+  llmModel: string;
+  deliveryChannel: string;
+  timezone: string;
+  operatorName: string;
+  scheduleHint: string;
+  systemPrompt: string;
+  overviewPrompt: string;
+}
+
+/** Normalize for dirty checks — undo/restore shouldn't trip on CRLF or trailing blanks. */
+function normalizePrefText(value: string): string {
+  return value.replace(/\r\n/g, "\n").trimEnd();
+}
+
+function snapshotFromProps(props: PreferencesFormProps): PrefsSnapshot {
+  return {
+    llmProvider: props.llmProvider,
+    llmModel: props.llmModel,
+    deliveryChannel: props.deliveryChannel,
+    timezone: props.timezone,
+    operatorName: props.operatorName,
+    scheduleHint: props.scheduleHint,
+    systemPrompt: props.systemPrompt,
+    overviewPrompt: props.overviewPrompt,
+  };
+}
+
+function snapshotsEqual(a: PrefsSnapshot, b: PrefsSnapshot): boolean {
+  return (
+    a.llmProvider === b.llmProvider &&
+    a.llmModel === b.llmModel &&
+    a.deliveryChannel === b.deliveryChannel &&
+    normalizePrefText(a.timezone) === normalizePrefText(b.timezone) &&
+    normalizePrefText(a.operatorName) === normalizePrefText(b.operatorName) &&
+    normalizePrefText(a.scheduleHint) === normalizePrefText(b.scheduleHint) &&
+    normalizePrefText(a.systemPrompt) === normalizePrefText(b.systemPrompt) &&
+    normalizePrefText(a.overviewPrompt) === normalizePrefText(b.overviewPrompt)
+  );
+}
+
 export function PreferencesForm(props: PreferencesFormProps) {
   const router = useRouter();
+  const { setHeaderSave } = usePreferencesSave();
+  const formId = "preferences-form";
+  const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
   const [llmProvider, setLlmProvider] = useState(props.llmProvider);
   const [llmModel, setLlmModel] = useState(props.llmModel);
+  const [deliveryChannel, setDeliveryChannel] = useState(props.deliveryChannel);
   const [systemPrompt, setSystemPrompt] = useState(props.systemPrompt);
   const [overviewPrompt, setOverviewPrompt] = useState(props.overviewPrompt);
   const [timezone, setTimezone] = useState(props.timezone);
+  const [operatorName, setOperatorName] = useState(props.operatorName);
+  const [scheduleHint, setScheduleHint] = useState(props.scheduleHint);
+  const [baseline, setBaseline] = useState<PrefsSnapshot>(() =>
+    snapshotFromProps(props),
+  );
+  const [prevPropsSnapshot, setPrevPropsSnapshot] = useState<PrefsSnapshot>(() =>
+    snapshotFromProps(props),
+  );
   const [historyId, setHistoryId] = useState(props.promptHistory[0]?.id ?? "");
+  const [prevHistoryKey, setPrevHistoryKey] = useState(
+    props.promptHistory.map((entry) => entry.id).join(","),
+  );
 
-  useEffect(() => {
-    setTimezone(props.timezone);
-  }, [props.timezone]);
+  const current: PrefsSnapshot = {
+    llmProvider,
+    llmModel,
+    deliveryChannel,
+    timezone,
+    operatorName,
+    scheduleHint,
+    systemPrompt,
+    overviewPrompt,
+  };
 
-  useEffect(() => {
+  const dirty = !snapshotsEqual(current, baseline);
+  const propsSnapshot = snapshotFromProps(props);
+
+  // Adopt server props when they change and the form is clean (post-save refresh).
+  if (!snapshotsEqual(propsSnapshot, prevPropsSnapshot)) {
+    setPrevPropsSnapshot(propsSnapshot);
+    if (!dirty) {
+      setBaseline(propsSnapshot);
+      setLlmProvider(propsSnapshot.llmProvider);
+      setLlmModel(propsSnapshot.llmModel);
+      setDeliveryChannel(propsSnapshot.deliveryChannel);
+      setTimezone(propsSnapshot.timezone);
+      setOperatorName(propsSnapshot.operatorName);
+      setScheduleHint(propsSnapshot.scheduleHint);
+      setSystemPrompt(propsSnapshot.systemPrompt);
+      setOverviewPrompt(propsSnapshot.overviewPrompt);
+    }
+  }
+
+  const historyKey = props.promptHistory.map((entry) => entry.id).join(",");
+  if (historyKey !== prevHistoryKey) {
+    setPrevHistoryKey(historyKey);
     const latest = props.promptHistory[0]?.id ?? "";
     if (!latest) {
       setHistoryId("");
-      return;
-    }
-    if (!props.promptHistory.some((entry) => entry.id === historyId)) {
+    } else if (!props.promptHistory.some((entry) => entry.id === historyId)) {
       setHistoryId(latest);
     }
-  }, [props.promptHistory, historyId]);
+  }
+
+  useEffect(() => {
+    if (!dirty) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent): void => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
+
+  useEffect(() => {
+    if (!dirty) {
+      setHeaderSave(null);
+      return;
+    }
+    setHeaderSave({
+      dirty: true,
+      saving: isPending,
+      requestSave: () => {
+        formRef.current?.requestSubmit();
+      },
+    });
+    return () => setHeaderSave(null);
+  }, [dirty, isPending, setHeaderSave]);
 
   return (
     <form
+      id={formId}
+      ref={formRef}
       className="flex flex-col gap-5"
       onSubmit={(event) => {
         event.preventDefault();
@@ -79,237 +194,258 @@ export function PreferencesForm(props: PreferencesFormProps) {
           const next = await saveConfig(formData);
           setResult(next);
           if (next.ok) {
+            // Clear dirty immediately — don't wait for refresh/prop round-trip.
+            setBaseline({
+              llmProvider,
+              llmModel,
+              deliveryChannel,
+              timezone,
+              operatorName,
+              scheduleHint,
+              systemPrompt,
+              overviewPrompt,
+            });
             router.refresh();
           }
         });
       }}
     >
-      <div className="flex flex-col gap-1 rounded border border-border bg-background px-3 py-3 text-sm">
-        <span className="font-medium text-foreground">
-          {copy.settings.connectorsHeading}
-        </span>
-        <p className="text-muted">{copy.settings.connectorsManagedInCoop}</p>
-        <Link
-          href="/coop"
-          className="w-fit text-foreground underline decoration-border underline-offset-2 hover:decoration-accent"
-        >
-          {copy.settings.openCoop}
-        </Link>
-      </div>
+        <div className="flex flex-col gap-1 rounded border border-border bg-background px-3 py-3 text-sm">
+          <span className="font-medium text-foreground">
+            {copy.settings.connectorsHeading}
+          </span>
+          <p className="text-muted">{copy.settings.connectorsManagedInCoop}</p>
+          <Link
+            href="/coop"
+            className="w-fit text-foreground underline decoration-border underline-offset-2 hover:decoration-accent"
+          >
+            {copy.settings.openCoop}
+          </Link>
+        </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted">{copy.settings.llmProvider}</span>
-        <select
-          name="llmProvider"
-          value={llmProvider}
-          onChange={(event) => {
-            const nextId = event.target.value;
-            setLlmProvider(nextId);
-            const match = props.llmProviders.find((p) => p.id === nextId);
-            if (match) {
-              setLlmModel(match.defaultModel);
-            }
-          }}
-          className="rounded border border-border bg-background px-3 py-2 text-foreground"
-        >
-          {props.llmProviders.map((provider) => (
-            <option key={provider.id} value={provider.id}>
-              {provider.label} ·{" "}
-              {provider.id === llmProvider ? llmModel : provider.defaultModel}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted">{copy.settings.llmModel}</span>
-        <input
-          name="llmModel"
-          value={llmModel}
-          onChange={(event) => setLlmModel(event.target.value)}
-          className="metric-mono rounded border border-border bg-background px-3 py-2 text-foreground"
-        />
-        <ul className="metric-mono text-xs text-muted">
-          <li className="mb-1 font-sans text-muted">
-            {copy.settings.llmDefaultsHint}
-          </li>
-          {props.llmProviders
-            .filter((provider) => provider.id !== "stub")
-            .map((provider) => (
-              <li key={provider.id}>
-                {provider.label}: {provider.defaultModel}
-              </li>
-            ))}
-        </ul>
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted">{copy.settings.deliveryChannel}</span>
-        <select
-          name="deliveryChannel"
-          defaultValue={props.deliveryChannel}
-          className="rounded border border-border bg-background px-3 py-2 text-foreground"
-        >
-          {props.deliveryChannels.map((channel) => (
-            <option key={channel.id} value={channel.id}>
-              {channel.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted">{copy.settings.timezone}</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            name="timezone"
-            value={timezone}
-            onChange={(event) => setTimezone(event.target.value)}
-            className="metric-mono min-w-0 flex-1 rounded border border-border bg-background px-3 py-2 text-foreground"
-            placeholder="Asia/Jerusalem"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          <button
-            type="button"
-            className="shrink-0 rounded border border-border px-3 py-2 text-xs text-muted hover:border-accent/40 hover:text-foreground"
-            onClick={() => {
-              try {
-                const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                if (zone) {
-                  setTimezone(zone);
-                }
-              } catch {
-                // Intl may be unavailable in rare environments.
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted">{copy.settings.llmProvider}</span>
+          <select
+            name="llmProvider"
+            value={llmProvider}
+            onChange={(event) => {
+              const nextId = event.target.value;
+              setLlmProvider(nextId);
+              const match = props.llmProviders.find((p) => p.id === nextId);
+              if (match) {
+                setLlmModel(match.defaultModel);
               }
             }}
+            className="rounded border border-border bg-background px-3 py-2 text-foreground"
           >
-            {copy.settings.timezoneUseBrowser}
-          </button>
-        </div>
-        <p className="text-xs text-muted">{copy.settings.timezoneHint}</p>
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted">{copy.settings.scheduleHint}</span>
-        <input
-          name="scheduleHint"
-          defaultValue={props.scheduleHint}
-          className="metric-mono rounded border border-border bg-background px-3 py-2 text-foreground"
-          placeholder="0 7 * * *"
-        />
-      </label>
-
-      <div className="flex flex-col gap-4 rounded border border-border bg-background px-3 py-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-foreground">
-            {copy.settings.promptsHeading}
-          </span>
-          <p className="text-sm text-muted">{copy.settings.promptsBlurb}</p>
-        </div>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted">{copy.settings.overviewPrompt}</span>
-          <textarea
-            name="overviewPrompt"
-            value={overviewPrompt}
-            onChange={(event) =>
-              setOverviewPrompt(event.target.value.slice(0, PROMPT_MAX_CHARS))
-            }
-            rows={10}
-            maxLength={PROMPT_MAX_CHARS}
-            className="min-h-40 resize-y rounded border border-border bg-surface px-3 py-2 font-sans text-foreground"
-            placeholder="e.g. Lead with revenue and traffic anomalies. Mention only blockers from GitHub. Skip calendar fluff unless meetings conflict."
-          />
-          <span className="metric-mono text-xs text-muted">
-            {copy.settings.promptChars(overviewPrompt.length, PROMPT_MAX_CHARS)}
-          </span>
-          <p className="text-xs text-muted">{copy.settings.overviewPromptHint}</p>
+            {props.llmProviders.map((provider) => (
+              <option key={provider.id} value={provider.id}>
+                {provider.label} ·{" "}
+                {provider.id === llmProvider ? llmModel : provider.defaultModel}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="text-muted">{copy.settings.systemPrompt}</span>
+          <span className="text-muted">{copy.settings.llmModel}</span>
+          <input
+            name="llmModel"
+            value={llmModel}
+            onChange={(event) => setLlmModel(event.target.value)}
+            className="metric-mono rounded border border-border bg-background px-3 py-2 text-foreground"
+          />
+          <ul className="metric-mono text-xs text-muted">
+            <li className="mb-1 font-sans text-muted">
+              {copy.settings.llmDefaultsHint}
+            </li>
+            {props.llmProviders
+              .filter((provider) => provider.id !== "stub")
+              .map((provider) => (
+                <li key={provider.id}>
+                  {provider.label}: {provider.defaultModel}
+                </li>
+              ))}
+          </ul>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted">{copy.settings.deliveryChannel}</span>
+          <select
+            name="deliveryChannel"
+            value={deliveryChannel}
+            onChange={(event) => setDeliveryChannel(event.target.value)}
+            className="rounded border border-border bg-background px-3 py-2 text-foreground"
+          >
+            {props.deliveryChannels.map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                {channel.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted">{copy.settings.timezone}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              name="timezone"
+              value={timezone}
+              onChange={(event) => setTimezone(event.target.value)}
+              className="metric-mono min-w-0 flex-1 rounded border border-border bg-background px-3 py-2 text-foreground"
+              placeholder="Asia/Jerusalem"
+              spellCheck={false}
+              autoComplete="off"
+            />
             <button
               type="button"
-              className="text-xs text-foreground underline decoration-border underline-offset-2 hover:decoration-accent"
-              onClick={() => setSystemPrompt(copy.briefSystemPrompt)}
+              className="shrink-0 rounded border border-border px-3 py-2 text-xs text-muted hover:border-accent/40 hover:text-foreground"
+              onClick={() => {
+                try {
+                  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                  if (zone) {
+                    setTimezone(zone);
+                  }
+                } catch {
+                  // Intl may be unavailable in rare environments.
+                }
+              }}
             >
-              {copy.settings.promptHistoryReset}
+              {copy.settings.timezoneUseBrowser}
             </button>
           </div>
-          <textarea
-            name="systemPrompt"
-            value={systemPrompt}
-            onChange={(event) =>
-              setSystemPrompt(event.target.value.slice(0, PROMPT_MAX_CHARS))
-            }
-            rows={8}
-            maxLength={PROMPT_MAX_CHARS}
-            className="min-h-32 resize-y rounded border border-border bg-surface px-3 py-2 font-sans text-foreground"
-          />
-          <span className="metric-mono text-xs text-muted">
-            {copy.settings.promptChars(systemPrompt.length, PROMPT_MAX_CHARS)}
-          </span>
-          <p className="text-xs text-muted">{copy.settings.systemPromptHint}</p>
+          <p className="text-xs text-muted">{copy.settings.timezoneHint}</p>
         </label>
 
-        <div className="flex flex-col gap-2 text-sm">
-          <span className="text-muted">{copy.settings.promptHistory}</span>
-          {props.promptHistory.length === 0 ? (
-            <p className="text-xs text-muted">
-              {copy.settings.promptHistoryEmpty}
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <select
-                value={historyId}
-                onChange={(event) => setHistoryId(event.target.value)}
-                className="min-w-0 flex-1 rounded border border-border bg-surface px-3 py-2 text-foreground"
-              >
-                {props.promptHistory.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {historyLabel(entry)}
-                  </option>
-                ))}
-              </select>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted">{copy.settings.operatorName}</span>
+          <input
+            name="operatorName"
+            value={operatorName}
+            onChange={(event) =>
+              setOperatorName(event.target.value.slice(0, OPERATOR_NAME_MAX))
+            }
+            maxLength={OPERATOR_NAME_MAX}
+            className="rounded border border-border bg-background px-3 py-2 text-foreground"
+            placeholder="Roy"
+            autoComplete="nickname"
+          />
+          <p className="text-xs text-muted">{copy.settings.operatorNameHint}</p>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted">{copy.settings.scheduleHint}</span>
+          <input
+            name="scheduleHint"
+            value={scheduleHint}
+            onChange={(event) => setScheduleHint(event.target.value)}
+            className="metric-mono rounded border border-border bg-background px-3 py-2 text-foreground"
+            placeholder="0 7 * * *"
+          />
+        </label>
+
+        <div className="flex flex-col gap-4 rounded border border-border bg-background px-3 py-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-foreground">
+              {copy.settings.promptsHeading}
+            </span>
+            <p className="text-sm text-muted">{copy.settings.promptsBlurb}</p>
+          </div>
+
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted">{copy.settings.overviewPrompt}</span>
+            <textarea
+              name="overviewPrompt"
+              value={overviewPrompt}
+              onChange={(event) =>
+                setOverviewPrompt(event.target.value.slice(0, PROMPT_MAX_CHARS))
+              }
+              rows={10}
+              maxLength={PROMPT_MAX_CHARS}
+              className="min-h-40 resize-y rounded border border-border bg-surface px-3 py-2 font-sans text-foreground"
+              placeholder="e.g. Lead with revenue and traffic anomalies. Mention only blockers from GitHub. Skip calendar fluff unless meetings conflict."
+            />
+            <span className="metric-mono text-xs text-muted">
+              {copy.settings.promptChars(overviewPrompt.length, PROMPT_MAX_CHARS)}
+            </span>
+            <p className="text-xs text-muted">{copy.settings.overviewPromptHint}</p>
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-muted">{copy.settings.systemPrompt}</span>
               <button
                 type="button"
-                className="w-fit rounded-md border border-border bg-surface-raised px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50"
-                onClick={() => {
-                  const entry = props.promptHistory.find(
-                    (item) => item.id === historyId,
-                  );
-                  if (!entry) {
-                    return;
-                  }
-                  setSystemPrompt(entry.system || copy.briefSystemPrompt);
-                  setOverviewPrompt(entry.overview);
-                }}
+                className="text-xs text-foreground underline decoration-border underline-offset-2 hover:decoration-accent"
+                onClick={() => setSystemPrompt(copy.briefSystemPrompt)}
               >
-                {copy.settings.promptHistoryLoad}
+                {copy.settings.promptHistoryReset}
               </button>
             </div>
-          )}
-        </div>
-      </div>
+            <textarea
+              name="systemPrompt"
+              value={systemPrompt}
+              onChange={(event) =>
+                setSystemPrompt(event.target.value.slice(0, PROMPT_MAX_CHARS))
+              }
+              rows={8}
+              maxLength={PROMPT_MAX_CHARS}
+              className="min-h-32 resize-y rounded border border-border bg-surface px-3 py-2 font-sans text-foreground"
+            />
+            <span className="metric-mono text-xs text-muted">
+              {copy.settings.promptChars(systemPrompt.length, PROMPT_MAX_CHARS)}
+            </span>
+            <p className="text-xs text-muted">{copy.settings.systemPromptHint}</p>
+          </label>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-fit rounded-md border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 disabled:opacity-70"
-      >
-        {isPending ? copy.pendingGather : copy.settings.save}
-      </button>
-
-      {result ? (
-        <div className="min-w-0 text-sm">
-          <p className={result.ok ? "text-ok" : "text-danger"}>
-            {result.message}
-          </p>
-          {!result.ok ? <ErrorDetails error={result.error} /> : null}
+          <div className="flex flex-col gap-2 text-sm">
+            <span className="text-muted">{copy.settings.promptHistory}</span>
+            {props.promptHistory.length === 0 ? (
+              <p className="text-xs text-muted">
+                {copy.settings.promptHistoryEmpty}
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  value={historyId}
+                  onChange={(event) => setHistoryId(event.target.value)}
+                  className="min-w-0 flex-1 rounded border border-border bg-surface px-3 py-2 text-foreground"
+                >
+                  {props.promptHistory.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {historyLabel(entry)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="w-fit rounded-md border border-border bg-surface-raised px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50"
+                  onClick={() => {
+                    const entry = props.promptHistory.find(
+                      (item) => item.id === historyId,
+                    );
+                    if (!entry) {
+                      return;
+                    }
+                    setSystemPrompt(entry.system || copy.briefSystemPrompt);
+                    setOverviewPrompt(entry.overview);
+                  }}
+                >
+                  {copy.settings.promptHistoryLoad}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      ) : null}
+
+        {result ? (
+          <div className="min-w-0 text-sm">
+            <p className={result.ok ? "text-ok" : "text-danger"}>
+              {result.message}
+            </p>
+            {!result.ok ? <ErrorDetails error={result.error} /> : null}
+          </div>
+        ) : null}
     </form>
   );
 }

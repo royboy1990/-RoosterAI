@@ -9,12 +9,14 @@ import { useState, type ReactNode } from "react";
  */
 export function SettingsSectionFold({
   title,
+  icon,
   summary,
   defaultOpen,
   className,
   children,
 }: {
   title: string;
+  icon?: ReactNode;
   summary?: ReactNode;
   defaultOpen: boolean;
   className?: string;
@@ -47,6 +49,9 @@ export function SettingsSectionFold({
               strokeLinejoin="round"
             />
           </svg>
+          {icon ? (
+            <span className="inline-flex text-muted">{icon}</span>
+          ) : null}
           <h2 className="text-lg font-medium leading-none text-foreground">
             {title}
           </h2>

@@ -6,6 +6,10 @@ function briefsDir(rootDir: string): string {
   return path.join(rootDir, "data", "briefs");
 }
 
+function audioDir(rootDir: string): string {
+  return path.join(rootDir, "data", "audio");
+}
+
 function logPath(rootDir: string): string {
   return path.join(rootDir, "data", "rooster.log");
 }
@@ -15,8 +19,24 @@ export function toBriefId(date: Date): string {
   return date.toISOString().replace(/:/g, "-");
 }
 
+export function briefAudioRelativePath(briefId: string): string {
+  return `data/audio/${briefId}.mp3`;
+}
+
 export async function ensureDataDirs(rootDir: string): Promise<void> {
   await mkdir(briefsDir(rootDir), { recursive: true });
+  await mkdir(audioDir(rootDir), { recursive: true });
+}
+
+export async function writeBriefAudio(
+  rootDir: string,
+  briefId: string,
+  mp3: Buffer,
+): Promise<string> {
+  await ensureDataDirs(rootDir);
+  const relative = briefAudioRelativePath(briefId);
+  await writeFile(path.join(audioDir(rootDir), `${briefId}.mp3`), mp3);
+  return relative;
 }
 
 export async function writeBrief(

@@ -16,9 +16,22 @@ import {
   PROMPT_MAX_CHARS,
   type PromptHistoryEntry,
 } from "./prompts";
+import {
+  OPERATOR_NAME_MAX,
+  ttsModeSchema,
+  ttsVoiceSchema,
+} from "./tts/voices";
 
 export { PROMPT_HISTORY_MAX, PROMPT_MAX_CHARS };
 export type { PromptHistoryEntry };
+export {
+  OPERATOR_NAME_MAX,
+  TTS_VOICES,
+  ttsModeSchema,
+  ttsVoiceSchema,
+  type TtsMode,
+  type TtsVoice,
+} from "./tts/voices";
 
 const connectorEntrySchema = z.object({
   id: z.string().min(1),
@@ -45,6 +58,8 @@ const roosterConfigSchema = z.object({
   /** When true, briefs are labeled [DEMO] and stored with demo: true. */
   demo: z.boolean().default(false),
   timezone: z.string().min(1).default("UTC"),
+  /** Spoken greeting only — not injected into the written brief. */
+  operatorName: z.string().max(OPERATOR_NAME_MAX).default(""),
   /** Per-connector AbortSignal.timeout budget in ms. */
   connectorTimeoutMs: z.number().int().positive().default(30_000),
   /** Max characters kept per connector after sanitize. */
@@ -60,6 +75,10 @@ const roosterConfigSchema = z.object({
   }),
   /** Play crow MP3 when a dashboard Wake the Flock Up succeeds. */
   wakeSound: z.boolean().default(true),
+  /** Dashboard spoken brief (OpenAI speech). Fail-soft on wake. */
+  ttsEnabled: z.boolean().default(true),
+  ttsMode: ttsModeSchema.default("each-wake"),
+  ttsVoice: ttsVoiceSchema.default("marin"),
   scheduleHint: z.string().optional(),
   prompts: promptsSchema.default({ overview: "", history: [] }),
 });

@@ -104,4 +104,10 @@ export interface BriefRecord {
   wakeMode?: WakeMode;
   /** Prior brief used for diff / unchanged; omitted on full. */
   baselineBriefId?: string;
+  /** Relative to repo root, e.g. data/audio/<id>.mp3 — dashboard only. */
+  audioRelativePath?: string;
+  /** Voice used when audio was synthesized. */
+  ttsVoice?: string;
+  /** Fail-soft TTS error from each-wake (wake still succeeds). */
+  ttsError?: string;
 }

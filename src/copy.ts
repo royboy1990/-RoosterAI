@@ -71,6 +71,12 @@ export const copy = {
     /** Muted line when Latest is an unchanged pointer; body below is the prior brief. */
     unchangedNotice: (when: string) =>
       `Nothing new since ${when}. Showing the last brief below.`,
+    playBrief: "Play spoken brief",
+    pauseBrief: "Pause spoken brief",
+    generateBrief: "Generate spoken brief",
+    generatingBrief: "Generating spoken brief…",
+    briefAudioFailed: "Could not generate spoken brief.",
+    briefAudioReady: "Spoken brief ready.",
   },
   history: {
     title: "History",
@@ -156,13 +162,29 @@ export const copy = {
       "Model, delivery, timezone, and briefing prompts. Sources are stocked in the Coop. Saved to `rooster.config.json`.",
     audioHeading: "Audio",
     audioBlurb:
-      "Wake crow and Rooster FM defaults. Personal tracks stay in the dock.",
+      "Wake crow, spoken brief, and Rooster FM defaults. Personal tracks stay in the dock.",
     audioSaved: "Audio preference roosted.",
     audioSaveFailed: "Could not save audio preference.",
+    audioFoldSummary: (opts: {
+      crow: boolean;
+      spoken: boolean;
+      mode: "each-wake" | "on-demand";
+      voice: string;
+    }) => {
+      const crow = opts.crow ? "Crow on" : "Crow off";
+      if (!opts.spoken) {
+        return `${crow} · Spoken off`;
+      }
+      const mode = opts.mode === "each-wake" ? "Each wake" : "On demand";
+      return `${crow} · ${mode} · ${opts.voice}`;
+    },
     timezone: "Timezone",
     timezoneHint:
       "IANA zone used for the clock, calendar “today”, and GA4 day boundaries. Leave as UTC and the dashboard will pick up your browser zone once.",
     timezoneUseBrowser: "Use browser timezone",
+    operatorName: "Your name",
+    operatorNameHint:
+      "Optional. Used only in the spoken greeting (Good morning, Roy.) — not in the written brief.",
     scheduleHint: "Schedule hint (cron)",
     llmProvider: "LLM provider",
     llmModel: "Model",
@@ -171,6 +193,24 @@ export const copy = {
     wakeSound: "Wake crow",
     wakeSoundHint:
       "Play the crow when Wake the Flock Up finishes successfully.",
+    ttsEnabled: "Spoken brief",
+    ttsEnabledHint:
+      "Generate an MP3 of the morning brief for playback on this dashboard.",
+    ttsMode: "When to generate",
+    ttsModeEachWake: "Each wake",
+    ttsModeOnDemand: "On demand",
+    ttsModeHint:
+      "Each wake synthesizes after a successful run. On demand waits until you hit play on Latest.",
+    ttsVoice: "Voice",
+    ttsVoiceHint:
+      "OpenAI built-in voices for gpt-4o-mini-tts. Use the play icon to preview.",
+    ttsVoicePreviewPlay: "Preview voice",
+    ttsVoicePreviewStop: "Stop preview",
+    ttsVoicePreviewPlayNamed: (voice: string) => `Preview ${voice} voice`,
+    ttsVoicePreviewStopNamed: (voice: string) => `Stop ${voice} preview`,
+    ttsVoicePreviewFailed: "Voice preview failed.",
+    ttsDisclosure:
+      "Spoken briefs use OpenAI’s text-to-speech. Audio stays on this machine under data/audio/.",
     startMusicOnLoad: "Start Rooster FM when the app loads",
     startMusicOnLoadHint:
       "Starts after you open the app. Most browsers need one click anywhere first.",
@@ -194,6 +234,7 @@ export const copy = {
     promptHistoryLoad: "Load into editor",
     promptHistoryReset: "Reset system prompt to default",
     save: "Save preferences",
+    unsavedChanges: "Unsaved changes",
     saved: "Preferences roosted.",
     saveFailed: "Could not save preferences.",
   },
