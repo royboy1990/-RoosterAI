@@ -17,6 +17,8 @@ export interface AudioPreferencesProps {
   ttsEnabled: boolean;
   ttsMode: TtsMode;
   ttsVoice: TtsVoice;
+  /** Used in voice preview greeting when set. */
+  operatorName?: string;
 }
 
 interface AudioDraft {
@@ -40,6 +42,7 @@ export function AudioPreferences({
   ttsEnabled,
   ttsMode,
   ttsVoice,
+  operatorName = "",
 }: AudioPreferencesProps) {
   const router = useRouter();
   const { startOnLoad, setStartOnLoad } = useRoosterFM();
@@ -187,6 +190,7 @@ export function AudioPreferences({
             <TtsVoicePicker
               value={current.ttsVoice}
               disabled={ttsControlsDisabled}
+              operatorName={operatorName}
               onChange={(voice) => {
                 persist({ ...current, ttsVoice: voice });
               }}

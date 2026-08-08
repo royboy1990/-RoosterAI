@@ -28,3 +28,12 @@ export const OPERATOR_NAME_MAX = 40;
 /** Short fixed line for Settings voice previews (keeps TTS cost tiny). */
 export const VOICE_PREVIEW_TEXT =
   "Good morning. This is your Rooster brief voice.";
+
+/** Preview line — includes the operator name when set (matches spoken greeting). */
+export function voicePreviewText(operatorName = ""): string {
+  const name = operatorName.trim().slice(0, OPERATOR_NAME_MAX);
+  if (name.length > 0) {
+    return `Good morning, ${name}. This is your Rooster brief voice.`;
+  }
+  return VOICE_PREVIEW_TEXT;
+}

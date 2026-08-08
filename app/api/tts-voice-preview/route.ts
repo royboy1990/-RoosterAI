@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { synthesizeSpeech } from "@/src/core/tts/openai-speech";
 import {
+  OPERATOR_NAME_MAX,
   TTS_VOICES,
-  VOICE_PREVIEW_TEXT,
   ttsVoiceSchema,
+  voicePreviewText,
   type TtsVoice,
 } from "@/src/core/tts/voices";
 
@@ -11,7 +12,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/tts-voice-preview?voice=marin — short sample MP3 for Settings previews.
+ * GET /api/tts-voice-preview?voice=marin&name=Roy — short sample MP3 for Settings previews.
  */
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -26,6 +27,9 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const voice: TtsVoice = parsed.data;
+  const operatorName = (url.searchParams.get("name") ?? "")
+    .trim()
+    .slice(0, OPERATOR_NAME_MAX);
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
@@ -36,8 +40,9 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const bytes = await synthesizeSpeech({
-      text: VOICE_PREVIEW_TEXT,
+      text: voicePreviewText(operatorName),
       voice,
+      operatorName,
       log: (message) => {
         console.log(message);
       },

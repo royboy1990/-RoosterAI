@@ -17,11 +17,17 @@ import { copy } from "@/src/copy";
 import { TTS_VOICES, type TtsVoice } from "@/src/core/tts/voices";
 
 /** Session cache so re-previewing a voice does not rebill. */
-const previewBlobCache = new Map<TtsVoice, string>();
+const previewBlobCache = new Map<string, string>();
+
+function previewCacheKey(voice: TtsVoice, operatorName: string): string {
+  return `${voice}\0${operatorName.trim()}`;
+}
 
 export interface TtsVoicePickerProps {
   value: TtsVoice;
   disabled?: boolean;
+  /** Saved operator name — preview says "Good morning, Name." when set. */
+  operatorName?: string;
   onChange: (voice: TtsVoice) => void;
 }
 
@@ -135,11 +141,13 @@ function PreviewGlyph({
 export function TtsVoicePicker({
   value,
   disabled = false,
+  operatorName = "",
   onChange,
 }: TtsVoicePickerProps) {
   const fm = useRoosterFMOptional();
   const fmRef = useRef(fm);
   fmRef.current = fm;
+  const nameForPreview = operatorName.trim();
 
   const listId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -334,7 +342,8 @@ export function TtsVoicePicker({
       setPreviewError(null);
       stopPlayback();
 
-      const cached = previewBlobCache.get(voice);
+      const cacheKey = previewCacheKey(voice, nameForPreview);
+      const cached = previewBlobCache.get(cacheKey);
       if (cached) {
         await playBlob(voice, cached);
         return;
@@ -349,10 +358,13 @@ export function TtsVoicePicker({
       setProgress(0);
 
       try {
-        const res = await fetch(
-          `/api/tts-voice-preview?voice=${encodeURIComponent(voice)}`,
-          { signal: controller.signal },
-        );
+        const params = new URLSearchParams({ voice });
+        if (nameForPreview) {
+          params.set("name", nameForPreview);
+        }
+        const res = await fetch(`/api/tts-voice-preview?${params}`, {
+          signal: controller.signal,
+        });
         if (!res.ok) {
           let detail: string = copy.settings.ttsVoicePreviewFailed;
           try {
@@ -370,11 +382,11 @@ export function TtsVoicePicker({
           return;
         }
         const url = URL.createObjectURL(blob);
-        const previous = previewBlobCache.get(voice);
+        const previous = previewBlobCache.get(cacheKey);
         if (previous) {
           URL.revokeObjectURL(previous);
         }
-        previewBlobCache.set(voice, url);
+        previewBlobCache.set(cacheKey, url);
         await playBlob(voice, url);
       } catch (err) {
         if (controller.signal.aborted) {
@@ -386,7 +398,7 @@ export function TtsVoicePicker({
         stopPreview();
       }
     },
-    [playBlob, stopPlayback, stopPreview],
+    [nameForPreview, playBlob, stopPlayback, stopPreview],
   );
 
   const onPreviewClick = (

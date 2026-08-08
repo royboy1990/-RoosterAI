@@ -467,6 +467,7 @@ export default async function SettingsPage() {
         ttsEnabled={loaded.config.ttsEnabled}
         ttsMode={loaded.config.ttsMode}
         ttsVoice={loaded.config.ttsVoice}
+        operatorName={loaded.config.operatorName}
       />
 
       {/* Preferences: editable, never secrets — stays expanded. */}
