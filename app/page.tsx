@@ -4,7 +4,6 @@ import { DefaultsBanner } from "@/app/_components/defaults-banner";
 import { DemoBanner } from "@/app/_components/demo-banner";
 import { OutcomeList } from "@/app/_components/outcome-list";
 import { WakeButton } from "@/app/_components/wake-button";
-import { WeatherPreviewSliders } from "@/app/_components/weather-preview-devtools";
 import { formatBriefDateTime, formatBriefTime } from "@/app/_lib/format";
 import { copy } from "@/src/copy";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
@@ -41,9 +40,6 @@ export default async function HomePage() {
   return (
     <main className="flex flex-col gap-6">
       {runningDefaults ? <DefaultsBanner /> : null}
-
-      {/* TEMP — delete WeatherPreviewSliders + weather-preview-devtools when done */}
-      <WeatherPreviewSliders />
 
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">

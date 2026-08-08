@@ -215,6 +215,23 @@ body {
   }
 }
 
+/* When sky is behind chrome, lift muted text off bright cloud peaks. */
+header[data-weather="1"] .site-header-brand {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+header[data-weather="1"] .site-header-meta,
+header[data-weather="1"] .site-header-nav {
+  color: color-mix(in srgb, var(--foreground) 82%, var(--muted));
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(0, 0, 0, 0.55);
+}
+
+header[data-weather="1"] .site-header-nav a:hover {
+  color: var(--foreground);
+}
+
 /* Header weather backdrop — low-contrast; keep nav/mono legible. */
 @keyframes header-weather-sun-spin {
   from {
@@ -262,20 +279,6 @@ body {
   }
 }
 
-@keyframes header-weather-rain-fall {
-  0% {
-    transform: translateY(-120%);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.45;
-  }
-  100% {
-    transform: translateY(220%);
-    opacity: 0;
-  }
-}
-
 @keyframes header-weather-snow-fall {
   0% {
     transform: translateY(-20%) translateX(0);
@@ -290,20 +293,24 @@ body {
   }
 }
 
+/* Soft Apple-like double pulse: brief primary blip, pause, quieter echo. */
 @keyframes header-weather-flash {
   0%,
-  92%,
+  88%,
   100% {
     opacity: 0;
   }
-  94% {
-    opacity: 0.22;
+  89% {
+    opacity: 0.16;
   }
-  96% {
+  90.5% {
     opacity: 0;
   }
-  97% {
-    opacity: 0.14;
+  92% {
+    opacity: 0.1;
+  }
+  93.5% {
+    opacity: 0;
   }
 }
 
@@ -421,17 +428,19 @@ body {
   filter: brightness(1.02) saturate(0.55) hue-rotate(-12deg);
 }
 
-.header-weather-rain {
-  animation: header-weather-rain-fall 1.35s linear infinite;
-}
-
 .header-weather-snow {
   animation: header-weather-snow-fall 5s linear infinite;
 }
 
 .header-weather-flash {
-  background: rgba(210, 220, 240, 0.35);
-  animation: header-weather-flash 7s ease-in-out infinite;
+  background:
+    radial-gradient(
+      ellipse 70% 90% at 62% 18%,
+      rgba(190, 210, 245, 0.55) 0%,
+      transparent 62%
+    ),
+    rgba(200, 214, 238, 0.22);
+  animation: header-weather-flash 8.5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -440,7 +449,6 @@ body {
   .header-weather-parallax-a,
   .header-weather-parallax-b,
   .header-weather-parallax-c,
-  .header-weather-rain,
   .header-weather-snow,
   .header-weather-flash {
     animation: none;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import {
   temperatureTintWash,
   weatherIconColor,
@@ -50,7 +51,7 @@ export function HeaderWeatherBackdrop({
       {condition === "clear" && !isDay ? <NightSky /> : null}
       {PARALLAX_CLOUD_CONDITIONS.has(condition) ? <ParallaxClouds /> : null}
       {condition === "rain" || condition === "storm" ? (
-        <RainStreaks storm={condition === "storm"} />
+        <HeaderRain storm={condition === "storm"} />
       ) : null}
       {condition === "snow" ? <SnowSpecks /> : null}
       {condition === "storm" ? <StormFlash /> : null}
@@ -195,23 +196,186 @@ function ParallaxClouds() {
   );
 }
 
-function RainStreaks({ storm }: { storm: boolean }) {
-  const count = storm ? 14 : 10;
+type RainDrop = {
+  x: number;
+  y: number;
+  /** Depth 0 (far) → 1 (near): drives speed, opacity, and streak width. */
+  z: number;
+  len: number;
+  drift: number;
+};
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function seedDrops(count: number, width: number, height: number): RainDrop[] {
+  const drops: RainDrop[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const z = 0.25 + Math.random() * 0.75;
+    drops.push({
+      x: Math.random() * (width + 40) - 20,
+      y: Math.random() * (height + 40) - 20,
+      z,
+      len: 6 + z * 10,
+      drift: 0.35 + z * 0.55,
+    });
+  }
+  return drops;
+}
+
+/**
+ * Header-scoped canvas rain — short angled streaks with wind drift and depth.
+ * Pauses on reduced motion and when the tab is hidden. No ground splashes.
+ */
+function HeaderRain({ storm }: { storm: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return;
+    }
+
+    const parent = canvas.parentElement;
+    if (!parent) {
+      return;
+    }
+
+    let raf = 0;
+    let running = true;
+    let reduced = prefersReducedMotion();
+    let drops: RainDrop[] = [];
+    let lastTs = 0;
+    const dropCount = storm ? 90 : 55;
+    // Slight wind angle (radians from vertical).
+    const wind = storm ? 0.22 : 0.14;
+
+    const resize = () => {
+      const rect = parent.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cssW = Math.max(1, Math.floor(rect.width));
+      const cssH = Math.max(1, Math.floor(rect.height));
+      canvas.width = Math.max(1, Math.floor(cssW * dpr));
+      canvas.height = Math.max(1, Math.floor(cssH * dpr));
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drops = seedDrops(dropCount, cssW, cssH);
+    };
+
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onMotion = () => {
+      reduced = media.matches;
+      if (reduced) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (raf !== 0) {
+          window.cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      } else {
+        kick();
+      }
+    };
+
+    const tick = (now: number) => {
+      if (!running) {
+        return;
+      }
+
+      if (reduced || document.visibilityState === "hidden") {
+        raf = 0;
+        return;
+      }
+
+      const cssW = canvas.clientWidth;
+      const cssH = canvas.clientHeight;
+      const dt = lastTs === 0 ? 16 : Math.min(32, now - lastTs);
+      lastTs = now;
+
+      ctx.clearRect(0, 0, cssW, cssH);
+
+      const sin = Math.sin(wind);
+      const cos = Math.cos(wind);
+
+      for (const drop of drops) {
+        const speed = (1.6 + drop.z * 3.2) * (dt / 16);
+        drop.x += sin * speed * drop.drift;
+        drop.y += cos * speed * (0.85 + drop.z * 0.9);
+
+        if (drop.y > cssH + drop.len || drop.x > cssW + 24 || drop.x < -24) {
+          drop.x = Math.random() * (cssW + 40) - 20;
+          drop.y = -drop.len - Math.random() * cssH * 0.3;
+          drop.z = 0.25 + Math.random() * 0.75;
+          drop.len = 6 + drop.z * 10;
+          drop.drift = 0.35 + drop.z * 0.55;
+        }
+
+        const alpha = (storm ? 0.28 : 0.2) + drop.z * 0.35;
+        const width = 0.6 + drop.z * 0.9;
+        const tipX = drop.x + sin * drop.len;
+        const tipY = drop.y + cos * drop.len;
+
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(178, 196, 222, ${alpha})`;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.moveTo(drop.x, drop.y);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+      }
+
+      raf = window.requestAnimationFrame(tick);
+    };
+
+    const kick = () => {
+      if (raf !== 0 || reduced) {
+        return;
+      }
+      lastTs = 0;
+      raf = window.requestAnimationFrame(tick);
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        kick();
+      } else if (raf !== 0) {
+        window.cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
+    const ro = new ResizeObserver(resize);
+    ro.observe(parent);
+    media.addEventListener("change", onMotion);
+    document.addEventListener("visibilitychange", onVisibility);
+    resize();
+    kick();
+
+    return () => {
+      running = false;
+      ro.disconnect();
+      media.removeEventListener("change", onMotion);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (raf !== 0) {
+        window.cancelAnimationFrame(raf);
+      }
+    };
+  }, [storm]);
+
   return (
-    <div className="absolute inset-0">
-      {Array.from({ length: count }, (_, i) => (
-        <span
-          key={i}
-          className="header-weather-rain absolute top-0 w-px bg-[rgba(170,186,210,0.45)]"
-          style={{
-            left: `${6 + ((i * 7) % 88)}%`,
-            height: `${10 + (i % 5) * 4}%`,
-            animationDelay: `${(i % 7) * 0.18}s`,
-            opacity: storm ? 0.7 : 0.55,
-          }}
-        />
-      ))}
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-0"
+      aria-hidden
+    />
   );
 }
 

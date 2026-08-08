@@ -10,7 +10,6 @@ import {
   WakeResultBanner,
 } from "@/app/_components/wake-provider";
 import { PreferencesSaveProvider } from "@/app/_components/preferences-save-context";
-import { WeatherPreviewProvider } from "@/app/_components/weather-preview-devtools";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { readLatestBrief } from "@/src/core/store";
 import { loadHeaderWeather } from "@/src/core/weather";
@@ -60,21 +59,17 @@ export default async function RootLayout({
             <PreferencesSaveProvider>
               <AmbientCanvas />
               <TimezoneBootstrap timezone={timezone} />
-              {/* TEMP: WeatherPreviewProvider — remove with weather-preview-devtools */}
-              <WeatherPreviewProvider baseWeather={weather}>
-                <SiteHeader
-                  status={latest?.status ?? null}
-                  timezone={timezone}
-                  now={now}
-                  weather={weather}
-                />
-                <WakeResultBanner />
-                <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-3xl flex-1 flex-col px-6 py-8 pb-28">
-                  {children}
-                </div>
-                <RoosterFmDock />
-              </WeatherPreviewProvider>
-            </PreferencesSaveProvider>
+              <SiteHeader
+                status={latest?.status ?? null}
+                timezone={timezone}
+                now={now}
+                weather={weather}
+              />
+              <WakeResultBanner />
+              <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-3xl flex-1 flex-col px-6 py-8 pb-28">
+                {children}
+              </div>
+              <RoosterFmDock />            </PreferencesSaveProvider>
           </WakeProvider>
         </RoosterFMProvider>
       </body>

@@ -14,7 +14,6 @@ import {
   HeaderWeatherBackdrop,
   WeatherConditionIcon,
 } from "@/app/_components/header-weather";
-import { usePreviewWeather } from "@/app/_components/weather-preview-devtools";
 
 export function SiteHeader({
   status,
@@ -27,28 +26,35 @@ export function SiteHeader({
   now: Date | string;
   weather?: WeatherSnapshot | null;
 }) {
-  // TEMP: preview override from WeatherPreviewSliders (delete with that file).
-  const displayWeather = usePreviewWeather(weather ?? null);
   // Client boundary may serialize Date → string from the server layout.
   const time = formatHeaderTime(new Date(now), timezone);
-  const hasWeather = displayWeather !== null && displayWeather !== undefined;
+  const hasWeather = weather !== null && weather !== undefined;
 
   return (
-    <header className="relative sticky top-0 z-30 overflow-hidden border-b border-border">
-      <HeaderWeatherBackdrop weather={displayWeather ?? null} />
-      {/* Directional scrim only when sky is present — top shows weather, bottom keeps text contrast. */}
+    <header
+      className="relative sticky top-0 z-30 overflow-hidden border-b border-border"
+      data-weather={hasWeather ? "1" : "0"}
+    >
+      <HeaderWeatherBackdrop weather={weather ?? null} />
+      {/* Scrim: keep sky visible top-right; darken under brand/nav for contrast. */}
       {hasWeather ? (
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface/25 via-surface/55 to-surface/90"
-          aria-hidden
-        />
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface/45 via-surface/72 to-surface/94"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-surface/60 via-surface/30 to-transparent"
+            aria-hidden
+          />
+        </>
       ) : null}
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0 flex flex-col gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2.5">
             <Link
               href="/"
-              className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-accent"
+              className="site-header-brand flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-accent"
             >
               {/* Black plate on the PNG; screen blend lifts the bird on dark chrome. */}
               <img
@@ -61,18 +67,18 @@ export function SiteHeader({
               />
               <span>{copy.brand}</span>
             </Link>
-            <p className="metric-mono min-w-0 text-xs text-muted">
+            <p className="site-header-meta metric-mono min-w-0 text-xs text-muted">
               [{time}]
               {hasWeather ? (
                 <>
                   {" · "}
                   <span className="inline-flex items-center gap-1 align-middle">
                     <WeatherConditionIcon
-                      condition={displayWeather.condition}
-                      isDay={displayWeather.isDay}
-                      tempC={displayWeather.tempC}
+                      condition={weather.condition}
+                      isDay={weather.isDay}
+                      tempC={weather.tempC}
                     />
-                    <span>{displayWeather.tempC}</span>
+                    <span>{weather.tempC}</span>
                   </span>
                 </>
               ) : null}
@@ -85,7 +91,7 @@ export function SiteHeader({
               </span>
             </p>
           </div>
-          <nav className="flex min-w-0 flex-wrap gap-4 text-sm text-muted">
+          <nav className="site-header-nav flex min-w-0 flex-wrap gap-4 text-sm text-muted">
             <Link href="/" className="hover:text-foreground">
               {copy.nav.latest}
             </Link>
