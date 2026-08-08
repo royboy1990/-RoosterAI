@@ -21,28 +21,32 @@ No multi-tenant SaaS. No tracking. No subscription fees. Just a loud bird doing 
 
 You do not have to live in raw JSON. The local dashboard is the control surface — stock connectors, check key status, pick GA4 properties, tune prompts, and read the brief. Secrets stay in `.env`; preferences write to `rooster.config.json`.
 
+Dark, glassy UI with a live clock, optional weather backdrop, **Coop Status**, and **Wake the Flock Up** on every page.
+
 <table>
   <tr>
     <td width="50%" valign="top">
-      <p><strong>Latest brief</strong> — action-first digest with urgent callouts, site tables, and a short Do Today list. Play a spoken version when TTS is enabled.</p>
-      <img src="./public/screenshots/latest-brief.webp" alt="Latest brief dashboard with Attention Today callouts, GA4 tables, and Do Today list" />
+      <p><strong>Header</strong> — nav (Latest, History, Coop, Settings), coop health, and the primary wake action. Weather layers in when configured.</p>
+      <img src="./public/screenshots/dashboard-header-weather.jpg" alt="RoosterAI header with smoky weather backdrop, coop status Optimal, and Wake the Flock Up button" />
     </td>
     <td width="50%" valign="top">
-      <p><strong>Connector outcomes</strong> — what each source actually returned before the LLM synthesized it.</p>
-      <img src="./public/screenshots/connector-outcomes.webp" alt="Connector outcomes for Calendar, IMAP, and Google Analytics" />
+      <p><strong>Status strip</strong> — same shell on a flat background: time, weather readout, and Coop Status badge.</p>
+      <img src="./public/screenshots/dashboard-header.jpg" alt="RoosterAI compact header with cloud temperature, coop status, navigation links, and orange wake button" />
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <p><strong>Settings / keys</strong> — ready vs missing env status (never the values), GA4 property picker, and Audio (wake crow + spoken brief).</p>
-      <img src="./public/screenshots/settings-keys.webp" alt="Settings page showing key readiness and GA4 property checkboxes" />
+      <p><strong>Latest brief</strong> — action-first digest with <strong>Attention Today</strong> callouts, section tables (analytics, calendar, inbox, and more), optional spoken playback, and the Rooster FM dock.</p>
+      <img src="./public/screenshots/latest-brief.jpg" alt="Latest brief page with demo banner, Attention Today items, analytics table, calendar and inbox sections, and Rooster FM player" />
     </td>
     <td width="50%" valign="top">
-      <p><strong>Preferences</strong> — LLM provider/model, delivery, timezone, optional name for spoken greetings, cron hint, and briefing prompts.</p>
-      <img src="./public/screenshots/preferences.webp" alt="Preferences form for LLM, delivery, timezone, and prompts" />
+      <p><strong>Settings</strong> — accordion panels for key readiness (never values), GA4 / Search Console / site-health picks, plus Audio (wake crow, TTS cadence, Rooster FM).</p>
+      <img src="./public/screenshots/settings-keys.jpg" alt="Settings page with Keys and Audio accordions, integration ready states, and Rooster FM player" />
     </td>
   </tr>
 </table>
+
+Scroll below the brief on **Latest** for **Connector outcomes** — raw per-source payloads before the LLM synthesis. **Preferences** (LLM, delivery, timezone, prompts) live in the open panel at the bottom of Settings.
 
 ## Tier 0 — hatch a demo brief (no keys)
 
