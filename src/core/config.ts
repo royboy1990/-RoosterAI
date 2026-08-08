@@ -150,6 +150,8 @@ export function hasRoosterConfig(rootDir: string = resolveRootDir()): boolean {
 export function buildDefaultConfig(env: NodeJS.ProcessEnv): RoosterConfig {
   const detected = connectorCatalog
     .filter((connector) => connector.id !== "demo")
+    // site-health has empty requiredEnv — never auto-install; stock from /coop.
+    .filter((connector) => connector.id !== "site-health")
     .filter((connector) => {
       if (!connector.requiredEnv.every((name) => envIsSet(name, env))) {
         return false;
@@ -157,6 +159,10 @@ export function buildDefaultConfig(env: NodeJS.ProcessEnv): RoosterConfig {
       // GA4 needs an explicit property selection (picker or GA4_PROPERTY_ID)
       // before it is useful in a defaults run.
       if (connector.id === "ga4" && !envIsSet("GA4_PROPERTY_ID", env)) {
+        return false;
+      }
+      // GSC needs an explicit site selection (picker or GSC_SITE_URL).
+      if (connector.id === "gsc" && !envIsSet("GSC_SITE_URL", env)) {
         return false;
       }
       return true;
@@ -173,6 +179,19 @@ export function buildDefaultConfig(env: NodeJS.ProcessEnv): RoosterConfig {
           id: connector.id,
           enabled: true,
           config: { properties },
+        };
+      }
+      if (connector.id === "gsc") {
+        const sites = env.GSC_SITE_URL
+          ? env.GSC_SITE_URL.split(",")
+              .map((part) => part.trim())
+              .filter(Boolean)
+              .map((siteUrl) => ({ siteUrl, name: "" }))
+          : [];
+        return {
+          id: connector.id,
+          enabled: true,
+          config: { sites },
         };
       }
       return {

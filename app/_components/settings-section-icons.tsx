@@ -92,3 +92,26 @@ export function SettingsAnalyticsIcon({
     </svg>
   );
 }
+
+export function SettingsSeoIcon({
+  className,
+}: {
+  className?: string;
+}): ReactNode {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className={className ?? "size-4 shrink-0"}
+    >
+      <circle cx="7" cy="7" r="3.75" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M10 10.25 13.25 13.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

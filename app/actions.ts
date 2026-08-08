@@ -24,6 +24,9 @@ import {
 import { getConnector } from "@/src/core/connectors";
 import { listAccessibleGa4Properties } from "@/src/core/connectors/ga4";
 import type { Ga4PropertyInfo } from "@/src/core/connectors/ga4-shared";
+import { listAccessibleGscSites } from "@/src/core/connectors/gsc";
+import type { GscSiteInfo } from "@/src/core/connectors/gsc-shared";
+import { parseSiteHealthSitesText } from "@/src/core/connectors/site-health-shared";
 import { runPipeline } from "@/src/core/pipeline";
 import { appendLog, readBrief } from "@/src/core/store";
 import {
@@ -166,6 +169,55 @@ function withGa4ConnectorConfig(
   ];
 }
 
+function readGscSitesFromForm(
+  formData: FormData,
+): Array<{ siteUrl: string; name: string }> {
+  return formData
+    .getAll("gscSite")
+    .map(String)
+    .map((siteUrl) => siteUrl.trim())
+    .filter(Boolean)
+    .map((siteUrl) => ({
+      siteUrl,
+      name: String(formData.get(`gscSiteName:${siteUrl}`) ?? "").trim(),
+    }));
+}
+
+function withGscConnectorConfig(
+  connectors: ConnectorEntry[],
+  sites: Array<{ siteUrl: string; name: string }>,
+): ConnectorEntry[] {
+  if (sites.length === 0) {
+    return connectors;
+  }
+
+  const gscConfig = { sites };
+  const index = connectors.findIndex((entry) => entry.id === "gsc");
+  if (index >= 0) {
+    return connectors.map((entry, i) =>
+      i === index
+        ? {
+            ...entry,
+            enabled: true,
+            config: {
+              ...entry.config,
+              ...gscConfig,
+            },
+          }
+        : entry,
+    );
+  }
+
+  return [
+    ...connectors,
+    {
+      id: "gsc",
+      enabled: true,
+      config: gscConfig,
+    },
+  ];
+}
+
 function clampPrompt(raw: string): string {
   return raw.length > PROMPT_MAX_CHARS ? raw.slice(0, PROMPT_MAX_CHARS) : raw;
 }
@@ -221,6 +273,7 @@ export async function saveConfig(formData: FormData): Promise<ActionResult> {
       const setupMode = formData.get("setup") === "1";
       const existing = loaded.config;
       const ga4Properties = readGa4PropertiesFromForm(formData);
+      const gscSites = readGscSitesFromForm(formData);
 
       const connectorIds = setupMode
         ? formData
@@ -242,14 +295,21 @@ export async function saveConfig(formData: FormData): Promise<ActionResult> {
           };
         });
         nextConnectors = withGa4ConnectorConfig(nextConnectors, ga4Properties);
+        nextConnectors = withGscConnectorConfig(nextConnectors, gscSites);
         demo =
           nextConnectors.length === 1 && nextConnectors[0]?.id === "demo";
-      } else if (ga4Properties.length > 0) {
-        nextConnectors = withGa4ConnectorConfig(
-          existing.connectors,
-          ga4Properties,
-        );
-        demo = false;
+      } else {
+        if (ga4Properties.length > 0) {
+          nextConnectors = withGa4ConnectorConfig(
+            nextConnectors,
+            ga4Properties,
+          );
+          demo = false;
+        }
+        if (gscSites.length > 0) {
+          nextConnectors = withGscConnectorConfig(nextConnectors, gscSites);
+          demo = false;
+        }
       }
 
       const draft = {
@@ -430,6 +490,25 @@ export async function listGa4Properties(): Promise<
     return {
       ok: false,
       message: copy.ga4.loadFailed,
+      error,
+    };
+  }
+}
+
+export async function listGscSites(): Promise<
+  | { ok: true; sites: GscSiteInfo[] }
+  | { ok: false; message: string; error: string }
+> {
+  try {
+    const rootDir = resolveRootDir();
+    const loaded = await loadConfig({ rootDir });
+    const sites = await listAccessibleGscSites(loaded.env, rootDir);
+    return { ok: true, sites };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      message: copy.gsc.loadFailed,
       error,
     };
   }
@@ -633,6 +712,125 @@ export async function saveGa4Properties(
     return {
       ok: false,
       message: copy.ga4.saveFailed,
+      error,
+    };
+  }
+}
+
+export async function saveGscSites(
+  sites: Array<{ siteUrl: string; name: string }>,
+): Promise<ActionResult> {
+  try {
+    return await enqueueConfigWrite(async () => {
+      const rootDir = resolveRootDir();
+      const loaded = await loadConfig({ rootDir });
+      const existing =
+        loaded.source === "file" ? loaded.config : emptyPersistedConfig();
+
+      const cleaned = sites
+        .map((site) => ({
+          siteUrl: site.siteUrl.trim(),
+          name: site.name.trim(),
+        }))
+        .filter((site) => site.siteUrl.length > 0);
+
+      const nextConnectors = withGscConnectorConfig(existing.connectors, cleaned);
+
+      // Allow clearing selection while keeping gsc installed.
+      const withCleared =
+        cleaned.length === 0
+          ? existing.connectors.map((entry) =>
+              entry.id === "gsc"
+                ? { ...entry, config: { ...entry.config, sites: [] } }
+                : entry,
+            )
+          : nextConnectors;
+
+      const draft = {
+        ...existing,
+        demo: false,
+        connectors: withCleared,
+      };
+
+      const parsed = roosterConfigSchema.safeParse(draft);
+      if (!parsed.success) {
+        return {
+          ok: false as const,
+          message: copy.gsc.saveFailed,
+          error: parsed.error.issues.map((i) => i.message).join("; "),
+        };
+      }
+
+      await writeRoosterConfig(rootDir, parsed.data);
+      revalidateCoopPaths();
+      return { ok: true as const, message: copy.gsc.saved };
+    });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      message: copy.gsc.saveFailed,
+      error,
+    };
+  }
+}
+
+export async function saveSiteHealthSites(text: string): Promise<ActionResult> {
+  try {
+    return await enqueueConfigWrite(async () => {
+      const rootDir = resolveRootDir();
+      const loaded = await loadConfig({ rootDir });
+      const existing =
+        loaded.source === "file" ? loaded.config : emptyPersistedConfig();
+
+      const sites = parseSiteHealthSitesText(text);
+      const index = existing.connectors.findIndex(
+        (entry) => entry.id === "site-health",
+      );
+      if (index < 0) {
+        return {
+          ok: false as const,
+          message: copy.siteHealth.saveFailed,
+          error: "Site health connector is not installed. Stock it from /coop first.",
+        };
+      }
+
+      const nextConnectors = existing.connectors.map((entry, i) =>
+        i === index
+          ? {
+              ...entry,
+              config: {
+                ...entry.config,
+                sites,
+              },
+            }
+          : entry,
+      );
+
+      const draft = {
+        ...existing,
+        demo: false,
+        connectors: nextConnectors,
+      };
+
+      const parsed = roosterConfigSchema.safeParse(draft);
+      if (!parsed.success) {
+        return {
+          ok: false as const,
+          message: copy.siteHealth.saveFailed,
+          error: parsed.error.issues.map((i) => i.message).join("; "),
+        };
+      }
+
+      await writeRoosterConfig(rootDir, parsed.data);
+      revalidateCoopPaths();
+      return { ok: true as const, message: copy.siteHealth.saved };
+    });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      message: copy.siteHealth.saveFailed,
       error,
     };
   }

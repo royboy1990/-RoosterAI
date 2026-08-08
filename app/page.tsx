@@ -4,7 +4,7 @@ import { DefaultsBanner } from "@/app/_components/defaults-banner";
 import { DemoBanner } from "@/app/_components/demo-banner";
 import { OutcomeList } from "@/app/_components/outcome-list";
 import { WakeButton } from "@/app/_components/wake-button";
-import { formatBriefTime } from "@/app/_lib/format";
+import { formatBriefDateTime, formatBriefTime } from "@/app/_lib/format";
 import { copy } from "@/src/copy";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { readLatestBrief, resolveSubstantiveBrief } from "@/src/core/store";
@@ -47,7 +47,7 @@ export default async function HomePage() {
         </h1>
         <div className="flex flex-wrap items-center gap-2">
           <p className="metric-mono text-xs text-muted">
-            {formatBriefTime(brief.createdAt, brief.timezone)} · {brief.id}
+            {formatBriefDateTime(brief.createdAt, brief.timezone)}
           </p>
           {showAudioButton ? (
             <BriefAudioButton

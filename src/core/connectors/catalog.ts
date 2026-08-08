@@ -61,4 +61,23 @@ export const connectorCatalog: readonly ConnectorCatalogEntry[] = [
     requiredEnv: ["GOOGLE_APPLICATION_CREDENTIALS"],
     optionalEnv: ["GA4_PROPERTY_ID"],
   },
+  {
+    id: "gsc",
+    label: "Search Console",
+    description:
+      "Last 7 days of clicks, impressions, CTR, and top pages/queries vs the prior week.",
+    tags: ["seo", "analytics"],
+    setupDocs: ".env.example",
+    requiredEnv: ["GOOGLE_APPLICATION_CREDENTIALS"],
+    optionalEnv: ["GSC_SITE_URL"],
+  },
+  {
+    id: "site-health",
+    label: "Site health",
+    description:
+      "robots.txt and sitemap checks for the origins you list — no API key.",
+    tags: ["seo"],
+    setupDocs: ".env.example",
+    requiredEnv: [],
+  },
 ];
