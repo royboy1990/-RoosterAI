@@ -110,4 +110,6 @@ export interface BriefRecord {
   ttsVoice?: string;
   /** Fail-soft TTS error from each-wake (wake still succeeds). */
   ttsError?: string;
+  /** Set when delivery fails after the brief was already persisted. */
+  deliveryError?: string;
 }
