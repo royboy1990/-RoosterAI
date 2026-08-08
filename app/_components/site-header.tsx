@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { copy } from "@/src/copy";
 import type { CoopStatus } from "@/src/core/types";
 import type { WeatherSnapshot } from "@/src/core/weather";
@@ -26,8 +27,25 @@ export function SiteHeader({
   now: Date | string;
   weather?: WeatherSnapshot | null;
 }) {
-  // Client boundary may serialize Date → string from the server layout.
-  const time = formatHeaderTime(new Date(now), timezone);
+  // Seed from the server render so hydration matches, then tick on the client.
+  const [clock, setClock] = useState(() => new Date(now));
+
+  useEffect(() => {
+    const tick = () => setClock(new Date());
+    tick();
+    const msToNextMinute = 60_000 - (Date.now() % 60_000);
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    const timeoutId = setTimeout(() => {
+      tick();
+      intervalId = setInterval(tick, 60_000);
+    }, msToNextMinute);
+    return () => {
+      clearTimeout(timeoutId);
+      if (intervalId !== undefined) clearInterval(intervalId);
+    };
+  }, []);
+
+  const time = formatHeaderTime(clock, timezone);
   const hasWeather = weather !== null && weather !== undefined;
 
   return (
