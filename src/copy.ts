@@ -31,6 +31,7 @@ export const copy = {
   nav: {
     latest: "Latest",
     history: "History",
+    ask: "Ask",
     coop: "Coop",
     settings: "Settings",
   },
@@ -77,12 +78,48 @@ export const copy = {
     generatingBrief: "Generating spoken brief…",
     briefAudioFailed: "Could not generate spoken brief.",
     briefAudioReady: "Spoken brief ready.",
+    /** Prefix for muted cost line under the brief article. */
+    costEstPrefix: "Est.",
+    costLlmLabel: "LLM",
+    costTtsLabel: "TTS",
   },
   history: {
     title: "History",
     empty: "No briefs in the archive yet.",
     demoTag: "DEMO",
     unchangedTag: "UNCHANGED",
+  },
+  brief: {
+    title: "Brief",
+    notFound: "That brief is not in the archive.",
+    backToLatest: "Back to Latest",
+  },
+  pecks: {
+    heading: "Pecks",
+    hint: "Questions worth asking about this brief",
+  },
+  ask: {
+    heading: "Ask",
+    hint: "Peck a question or ask your own — answers use this brief and recent history.",
+    ownLabel: "Ask your own",
+    placeholder: "Ask about this brief…",
+    send: "Ask",
+    sending: "Pecking…",
+    disabledStub:
+      "Ask needs a real LLM key — stub and demo-only modes stay silent here.",
+    disabledConfig: "Ask is turned off in config (askEnabled).",
+    recentHeading: "Recent chats",
+    recentEmpty: "No chats yet.",
+    chatsTitle: "Ask",
+    chatsBlurb: "Threads from pecks and follow-ups — reopen anytime.",
+    allChats: "All chats",
+    basedOn: (labels: string) => `Based on ${labels}`,
+    newChat: "New question",
+    threadTitle: "Ask",
+    emptyThread: "No messages in this thread.",
+    continuePlaceholder: "Follow up…",
+    failed: "Ask failed.",
+    backToBrief: "Back to brief",
   },
   coop: {
     title: "Stock the Coop",
@@ -178,6 +215,17 @@ export const copy = {
       const mode = opts.mode === "each-wake" ? "Each wake" : "On demand";
       return `${crow} · ${mode} · ${opts.voice}`;
     },
+    spendHeading: "Estimated spend",
+    spendBlurb:
+      "Local estimate from public list prices frozen on each brief — not your provider invoice.",
+    spendThisWeek: "This week",
+    spendThisMonth: "This month",
+    spendWeekShort: "Week",
+    spendMonthShort: "Month",
+    spendBriefCount: (n: number) =>
+      n === 1 ? "1 brief" : `${n} briefs`,
+    spendIncomplete:
+      "Some briefs have token or character usage without a known list price — totals omit those legs.",
     timezone: "Timezone",
     timezoneHint:
       "IANA zone used for the clock, calendar “today”, and GA4 day boundaries. Leave as UTC and the dashboard will pick up your browser zone once.",
@@ -248,6 +296,7 @@ export const copy = {
     successBefore: "Flock woken. Fresh brief on the ",
     successLink: "perch",
     successAfter: ".",
+    dismiss: "Dismiss",
     failed: "Wake failed.",
     alreadyRunning:
       "A wake is already in progress — wait for it to finish.",

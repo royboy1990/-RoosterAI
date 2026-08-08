@@ -6,6 +6,15 @@
   "llmTimeoutMs": 90000,
   "ttsTimeoutMs": 60000,
   "deliveryTimeoutMs": 30000,
+  "pecksEnabled": true,
+  "askEnabled": true,
+  "chatContextBriefs": 7,
+  "pecksTimeoutMs": 20000,
+  "askTimeoutMs": 60000,
+  "askMaxUserMessageChars": 4000,
+  "askMaxAssistantChars": 8000,
+  "askContextCharBudget": 24000,
+  "chatMaxStoredMessages": 40,
   "perConnectorCharBudget": 4000,
   "connectors": [
     {

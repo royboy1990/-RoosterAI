@@ -1,9 +1,18 @@
-import type { LlmCompleteInput, LlmProvider, RunContext } from "../types";
+import type {
+  LlmCompleteInput,
+  LlmCompletion,
+  LlmProvider,
+  RunContext,
+} from "../types";
 
 interface OpenAiChatResponse {
   choices?: Array<{
     message?: { content?: string | null };
   }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
   error?: { message?: string };
 }
 
@@ -24,7 +33,7 @@ export const openaiCompatibleProvider: LlmProvider = {
   async complete(
     input: LlmCompleteInput,
     ctx: RunContext,
-  ): Promise<string> {
+  ): Promise<LlmCompletion> {
     const apiKey = process.env.OPENAI_API_KEY!.trim();
     const baseUrl = (
       process.env.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1"
@@ -62,6 +71,14 @@ export const openaiCompatibleProvider: LlmProvider = {
     if (!text) {
       throw new Error("OpenAI-compatible response missing choices[0].message.content");
     }
-    return text;
+
+    const inputTokens = raw.usage?.prompt_tokens;
+    const outputTokens = raw.usage?.completion_tokens;
+    const usage =
+      typeof inputTokens === "number" && typeof outputTokens === "number"
+        ? { inputTokens, outputTokens }
+        : undefined;
+
+    return { text, usage };
   },
 };

@@ -141,6 +141,15 @@ body {
   color: var(--foreground);
 }
 
+.brief-prose .brief-inline-code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--foreground) 8%, var(--surface));
+  color: var(--foreground);
+}
+
 .brief-prose .brief-urgent {
   margin: 0.85em 0;
   padding: 0.65em 0.85em;
@@ -184,6 +193,18 @@ body {
 .metric-mono {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+}
+
+/* Recent chats row appear */
+@keyframes ask-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Rooster FM dock: long track titles scroll like Spotify / Apple Music. */

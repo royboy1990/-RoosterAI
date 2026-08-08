@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 
 /**
  * Small safe markdown → React renderer for LLM brief text.
- * Supports ### / ####, **bold**, ul/ol, ---, !!! urgent, tables, paragraphs.
+ * Supports ### / ####, **bold**, `inline code`, ul/ol, ---, !!! urgent, tables, paragraphs.
  * Escapes via JSX text — never interprets raw HTML from the model.
  */
 
-type InlinePart = string | { bold: string };
+type InlinePart = string | { bold: string } | { code: string };
 
 type Block =
   | { type: "h3" | "h4"; parts: InlinePart[] }
@@ -18,14 +18,19 @@ type Block =
 
 function parseInlines(text: string): InlinePart[] {
   const parts: InlinePart[] = [];
-  const re = /\*\*(.+?)\*\*/g;
+  // Bold and inline code; process left-to-right so nested markers don't fight.
+  const re = /\*\*(.+?)\*\*|`([^`]+)`/g;
   let last = 0;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
     if (match.index > last) {
       parts.push(text.slice(last, match.index));
     }
-    parts.push({ bold: match[1]! });
+    if (match[1] !== undefined) {
+      parts.push({ bold: match[1] });
+    } else {
+      parts.push({ code: match[2]! });
+    }
     last = match.index + match[0].length;
   }
   if (last < text.length) {
@@ -35,13 +40,19 @@ function parseInlines(text: string): InlinePart[] {
 }
 
 function renderInlines(parts: InlinePart[]): ReactNode[] {
-  return parts.map((part, i) =>
-    typeof part === "string" ? (
-      <span key={i}>{part}</span>
-    ) : (
-      <strong key={i}>{part.bold}</strong>
-    ),
-  );
+  return parts.map((part, i) => {
+    if (typeof part === "string") {
+      return <span key={i}>{part}</span>;
+    }
+    if ("bold" in part) {
+      return <strong key={i}>{part.bold}</strong>;
+    }
+    return (
+      <code key={i} className="brief-inline-code">
+        {part.code}
+      </code>
+    );
+  });
 }
 
 function splitTableCells(line: string): string[] {

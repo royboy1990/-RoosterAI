@@ -1,4 +1,9 @@
-import type { LlmCompleteInput, LlmProvider, RunContext } from "../types";
+import type {
+  LlmCompleteInput,
+  LlmCompletion,
+  LlmProvider,
+  RunContext,
+} from "../types";
 import { SHOWCASE_BRIEF_TEXT } from "../demo/showcase-brief";
 
 /**
@@ -16,7 +21,10 @@ export const stubProvider: LlmProvider = {
   async complete(
     _input: LlmCompleteInput,
     _ctx: RunContext,
-  ): Promise<string> {
-    return SHOWCASE_BRIEF_TEXT.trim();
+  ): Promise<LlmCompletion> {
+    return {
+      text: SHOWCASE_BRIEF_TEXT.trim(),
+      usage: { inputTokens: 0, outputTokens: 0 },
+    };
   },
 };

@@ -3,6 +3,7 @@ import { Ga4PropertyPicker } from "@/app/_components/ga4-property-picker";
 import { GscSitePicker } from "@/app/_components/gsc-site-picker";
 import { SiteHealthOriginsEditor } from "@/app/_components/site-health-origins-editor";
 import { AudioPreferences } from "@/app/_components/audio-preferences";
+import { EstimatedSpendSection } from "@/app/_components/estimated-spend-section";
 import { PreferencesForm } from "@/app/_components/preferences-form";
 import {
   SettingsKeysIcon,
@@ -18,6 +19,7 @@ import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { deliveryChannels } from "@/src/core/delivery";
 import { labelForImapHost } from "@/src/core/imap-providers";
 import { llmProviders } from "@/src/core/llm";
+import { summarizeBriefSpend } from "@/src/core/pricing/rollup";
 import { resolveConnectors } from "@/src/core/registry";
 import type { SiteHealthSite } from "@/src/core/connectors/site-health-shared";
 
@@ -352,6 +354,11 @@ export default async function SettingsPage() {
     : keysNeedingAttention > 0
       ? copy.settings.keysFoldAttention(keysNeedingAttention)
       : copy.settings.keysFoldReady(keyGroups.length);
+  const spendSummary = await summarizeBriefSpend(
+    rootDir,
+    timezone,
+    new Date(),
+  );
 
   return (
     <main className="flex flex-col gap-10">
@@ -469,6 +476,8 @@ export default async function SettingsPage() {
         ttsVoice={loaded.config.ttsVoice}
         operatorName={loaded.config.operatorName}
       />
+
+      <EstimatedSpendSection summary={spendSummary} />
 
       {/* Preferences: editable, never secrets — stays expanded. */}
       <section className="flex flex-col gap-3 rounded border border-accent/25 bg-surface-raised/80 p-4 backdrop-blur-md">

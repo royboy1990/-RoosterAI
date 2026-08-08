@@ -23,9 +23,14 @@ export function briefAudioRelativePath(briefId: string): string {
   return `data/audio/${briefId}.mp3`;
 }
 
+function chatsDir(rootDir: string): string {
+  return path.join(rootDir, "data", "chats");
+}
+
 export async function ensureDataDirs(rootDir: string): Promise<void> {
   await mkdir(briefsDir(rootDir), { recursive: true });
   await mkdir(audioDir(rootDir), { recursive: true });
+  await mkdir(chatsDir(rootDir), { recursive: true });
 }
 
 export async function writeBriefAudio(

@@ -169,30 +169,62 @@ export function WakeButton({ demo = false }: { demo?: boolean }) {
 
 export function WakeResultBanner() {
   const { result } = useWake();
-  if (!result) {
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setDismissed(false);
+    if (!result?.ok) {
+      return;
+    }
+    const timer = window.setTimeout(() => setDismissed(true), 30_000);
+    return () => window.clearTimeout(timer);
+  }, [result]);
+
+  if (!result || dismissed) {
     return null;
   }
 
   return (
     <div className="relative z-10 border-b border-border bg-surface/80 backdrop-blur-md">
-      <div className="mx-auto w-full min-w-0 max-w-3xl px-6 py-3 text-sm">
-        {result.ok ? (
-          <p className="text-ok">
-            {copy.wake.successBefore}
-            <Link
-              href="/"
-              className="underline decoration-current underline-offset-2 hover:decoration-accent"
-            >
-              {copy.wake.successLink}
-            </Link>
-            {copy.wake.successAfter}
-          </p>
-        ) : (
-          <>
-            <p className="text-danger">{result.message}</p>
-            <ErrorDetails error={result.error} />
-          </>
-        )}
+      <div className="mx-auto flex w-full min-w-0 max-w-3xl items-start gap-3 px-6 py-3 text-sm">
+        <div className="min-w-0 flex-1">
+          {result.ok ? (
+            <p className="text-ok">
+              {copy.wake.successBefore}
+              <Link
+                href="/"
+                className="underline decoration-current underline-offset-2 hover:decoration-accent"
+              >
+                {copy.wake.successLink}
+              </Link>
+              {copy.wake.successAfter}
+            </p>
+          ) : (
+            <>
+              <p className="text-danger">{result.message}</p>
+              <ErrorDetails error={result.error} />
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label={copy.wake.dismiss}
+          className="mt-0.5 shrink-0 rounded p-0.5 text-muted transition hover:bg-border/40 hover:text-foreground"
+        >
+          <svg
+            viewBox="0 0 12 12"
+            width="12"
+            height="12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            aria-hidden
+          >
+            <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" />
+          </svg>
+        </button>
       </div>
     </div>
   );
