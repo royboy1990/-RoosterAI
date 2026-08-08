@@ -55,6 +55,91 @@ function renderInlines(parts: InlinePart[]): ReactNode[] {
   });
 }
 
+function cellPlainText(parts: InlinePart[]): string {
+  return parts
+    .map((part) => {
+      if (typeof part === "string") {
+        return part;
+      }
+      if ("bold" in part) {
+        return part.bold;
+      }
+      return part.code;
+    })
+    .join("");
+}
+
+type DeltaDirection = "up" | "down" | "flat";
+
+/**
+ * Detect stock-style deltas in compact table cells only.
+ * Matches arrows (↑↓→), signed % (+12% / -4%), and connector labels
+ * (→ flat, ↑ new). Skips prose / mixed-signal cells so Key Signal stays uncolored.
+ */
+function detectDeltaDirection(text: string): DeltaDirection | null {
+  const t = text.trim();
+  if (t.length === 0 || t.length > 48) {
+    return null;
+  }
+
+  // Leading arrow or sign, optional magnitude, optional short label.
+  // e.g. ↑ 4%, ↓27%, → 0%, → flat, ↑ new, +12%, -3.5%, ↑ 18% vs prior day
+  const leading = t.match(
+    /^(?:([↑⬆▲])|([↓⬇▼])|([→➡▶←⬅◀])|([+-]))\s*(?:(\d+(?:\.\d+)?)\s*%?)?(?:\s+(?:vs\s+prior\s+(?:day|7d)|flat|new))?$/i,
+  );
+  if (leading) {
+    const [, up, down, flat, sign, magnitude] = leading;
+    if (flat) {
+      return "flat";
+    }
+    if (up || sign === "+") {
+      return magnitude !== undefined && Number.parseFloat(magnitude) === 0
+        ? "flat"
+        : "up";
+    }
+    if (down || sign === "-") {
+      return magnitude !== undefined && Number.parseFloat(magnitude) === 0
+        ? "flat"
+        : "down";
+    }
+  }
+
+  // Trailing arrow: 4% ↑ / 27%↓
+  const trailing = t.match(
+    /^(\d+(?:\.\d+)?)\s*%?\s*([↑⬆▲↓⬇▼→➡▶←⬅◀])$/,
+  );
+  if (trailing) {
+    const arrow = trailing[2]!;
+    if (/[→➡▶←⬅◀]/.test(arrow)) {
+      return "flat";
+    }
+    if (/[↑⬆▲]/.test(arrow)) {
+      return Number.parseFloat(trailing[1]!) === 0 ? "flat" : "up";
+    }
+    return Number.parseFloat(trailing[1]!) === 0 ? "flat" : "down";
+  }
+
+  // Bare 0% with no arrow — treat as flat when it's the whole cell.
+  if (/^0+(?:\.0+)?\s*%$/.test(t)) {
+    return "flat";
+  }
+
+  return null;
+}
+
+function deltaClassName(direction: DeltaDirection | null): string | undefined {
+  if (direction === "up") {
+    return "brief-delta-up";
+  }
+  if (direction === "down") {
+    return "brief-delta-down";
+  }
+  if (direction === "flat") {
+    return "brief-delta-flat";
+  }
+  return undefined;
+}
+
 function splitTableCells(line: string): string[] {
   const trimmed = line.trim();
   const withoutEdges = trimmed
@@ -254,7 +339,14 @@ export function BriefProse({ text }: { text: string }) {
                     {block.rows.map((row, r) => (
                       <tr key={r}>
                         {row.map((cell, c) => (
-                          <td key={c}>{renderInlines(cell)}</td>
+                          <td
+                            key={c}
+                            className={deltaClassName(
+                              detectDeltaDirection(cellPlainText(cell)),
+                            )}
+                          >
+                            {renderInlines(cell)}
+                          </td>
                         ))}
                       </tr>
                     ))}

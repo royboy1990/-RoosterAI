@@ -190,6 +190,27 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Compact Δ cells (↑ / ↓ / → / ±%) — stock-style up/down, whole cell. */
+.brief-prose td.brief-delta-up {
+  color: var(--ok);
+  font-weight: 500;
+}
+
+.brief-prose td.brief-delta-down {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.brief-prose td.brief-delta-flat {
+  color: var(--muted);
+}
+
+.brief-prose td.brief-delta-up strong,
+.brief-prose td.brief-delta-down strong,
+.brief-prose td.brief-delta-flat strong {
+  color: inherit;
+}
+
 .metric-mono {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
