@@ -2,12 +2,20 @@ import { copy } from "@/src/copy";
 import type { CoopStatus } from "@/src/core/types";
 
 export function formatHeaderTime(date: Date, timezone: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: timezone,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
-  }).format(date);
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  return `${get("weekday")} ${get("day")} ${get("month")} ${get("hour")}:${get("minute")}`;
 }
 
 export function coopStatusLabel(status: CoopStatus | null | undefined): string {
