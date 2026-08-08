@@ -25,6 +25,33 @@ function Ga4Logo(props: IconProps) {
   );
 }
 
+function GscLogo(props: IconProps) {
+  return (
+    <IconShell fill="none" stroke="currentColor" strokeWidth="1.75" {...props}>
+      <circle cx="11" cy="11" r="6.25" />
+      <path d="m15.5 15.5 4 4" strokeLinecap="round" />
+    </IconShell>
+  );
+}
+
+function SiteHealthLogo(props: IconProps) {
+  return (
+    <IconShell fill="none" stroke="currentColor" strokeWidth="1.75" {...props}>
+      <path
+        d="M4.5 12.5 7.25 15l4.5-5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12.5 5.5h4v4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M16.5 5.5 9 13" strokeLinecap="round" />
+    </IconShell>
+  );
+}
+
 function OpenAiLogo(props: IconProps) {
   return (
     <IconShell {...props}>
@@ -131,6 +158,8 @@ function RoosterLogo(props: IconProps) {
 
 const LOGOS: Record<string, (props: IconProps) => ReactElement> = {
   ga4: Ga4Logo,
+  gsc: GscLogo,
+  "site-health": SiteHealthLogo,
   "openai-compatible": OpenAiLogo,
   gemini: GeminiLogo,
   anthropic: AnthropicLogo,

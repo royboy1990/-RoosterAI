@@ -289,6 +289,42 @@ export const copy = {
     saveFailed: "Could not save GA4 properties.",
     refresh: "Refresh list",
   },
+  gsc: {
+    heading: "Search Console sites",
+    blurb:
+      "Pulled from your service account. Select the properties you want in the morning brief.",
+    credentialsMissing:
+      "Set GOOGLE_APPLICATION_CREDENTIALS in `.env` to load your Search Console sites.",
+    loadFailed: "Could not list Search Console sites.",
+    loadFailedHint:
+      "Enable the Search Console API on the GCP project, add the service-account email as a user on each property, then refresh.",
+    empty: "No Search Console sites visible to this service account.",
+    foldReady: (n: number) =>
+      n === 1 ? "1 site selected" : `${n} sites selected`,
+    foldNeedsSetup: "Needs setup",
+    permissionLabel: "Permission",
+    selectAll: "Select all",
+    selectNone: "Select none",
+    selectedCount: (n: number) =>
+      n === 1 ? "1 site selected" : `${n} sites selected`,
+    save: "Save Search Console sites",
+    saved: "Search Console sites roosted.",
+    saveFailed: "Could not save Search Console sites.",
+    refresh: "Refresh list",
+  },
+  siteHealth: {
+    heading: "Site health origins",
+    blurb:
+      "One absolute origin per line (e.g. https://example.com). Optional label: Name | https://example.com",
+    foldReady: (n: number) =>
+      n === 1 ? "1 origin configured" : `${n} origins configured`,
+    foldNeedsSetup: "Needs setup",
+    placeholder: "https://example.com\nBlog | https://blog.example.com",
+    save: "Save origins",
+    saved: "Site health origins roosted.",
+    saveFailed: "Could not save site health origins.",
+    emptyHint: "Add at least one origin so the morning brief can check robots.txt and sitemaps.",
+  },
   emptyCoopPipeline: "The coop is empty — no installed sources to gather.",
   skippedLlmEmpty: "LLM skipped — nothing to summarize.",
   /** Delivered when today's digest matches the usable baseline. */
@@ -316,16 +352,23 @@ Rules:
 - Do not mention being an AI.
 - Do not invent HTML, CSS, or any markup outside the formatting catalog below.
 
+Synthesize related sources (do not silo or drop them):
+- When Google Analytics, Search Console, and/or Site health cover the same properties, write one Sites overview keyed by site — not separate GA-only / GSC-only dumps, and not GA alone when Search Console is present.
+- Match sites by domain/name across sections (e.g. GlyphShuffle ↔ sc-domain:glyphshuffle.com).
+- Per site, weave the useful signal: yesterday's traffic (sessions/users/bounce/top pages) with the lagged Search week (clicks/impressions/CTR/position/top queries) and any robots/sitemap issues.
+- Call out tension when windows disagree (e.g. sessions ↓ yesterday but clicks ↑ over the Search week) — that is signal, not noise.
+- Keep windows honest in wording when both appear (GA = yesterday; GSC ≈ last complete 7 days, delayed).
+
 Formatting catalog (dashboard renders these; use sparingly):
 - ### Section / #### Subsection
 - **bold** for key names, metrics, or short labels
 - - bullets and 1. numbered lists
 - --- horizontal rule between major sections when useful
 - !!! one-line urgent callout — only for items that need action today. At most 1–2 per brief. Example: !!! Reply to baseplatedigital support ticket
-- Markdown tables — only when comparing the same fields across rows (e.g. sites × sessions × delta). Prefer bullets otherwise. Example:
-  | Site | Sessions | Δ |
-  | --- | --- | --- |
-  | GameFoundry | 45 | ↑114% |
+- Markdown tables — only when comparing the same fields across rows (e.g. sites × sessions × search clicks). Prefer bullets otherwise. Example:
+  | Site | Sessions | Δ | Clicks (7d) | Δ |
+  | --- | --- | --- | --- | --- |
+  | GameFoundry | 45 | ↑114% | 53 | ↑4% |
 
 Do not use every format in every brief. Default to headings + bullets; reach for !!! and tables only when they clearly help.`,
 } as const;

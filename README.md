@@ -309,13 +309,51 @@ Once this is set up, the app uses the JSON key to authenticate silently as the s
 
 </details>
 
+<details>
+<summary><strong>Search Console — same service account</strong></summary>
+
+<br>
+
+GSC reuses `GOOGLE_APPLICATION_CREDENTIALS` (same JSON key as GA4). No second secret blob.
+
+① **Enable the Search Console API**
+
+1. In [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services > Library**, search for **Google Search Console API** and **Enable** it on the project that owns your service account key.
+
+② **Add the service account to each GSC property**
+
+1. Open [Google Search Console](https://search.google.com/search-console).
+2. Select a property → **Settings → Users and permissions**.
+3. Add the service-account email (`…@….iam.gserviceaccount.com`) with **Full** access (Restricted may be enough for read-only reports; Owner is not required).
+
+③ **Configure**
+
+```env
+GOOGLE_APPLICATION_CREDENTIALS=./ga4-service-account.json
+# Optional fallback if you skip the Settings site picker:
+# GSC_SITE_URL=https://example.com/,sc-domain:example.com
+```
+
+Stock **Search Console** from `/coop`, then pick sites under Settings (or Setup when credentials are present). Wake uses the same credentials file as GA4 — no new GitHub secret.
+
+</details>
+
+<details>
+<summary><strong>Site health — robots.txt + sitemaps</strong></summary>
+
+<br>
+
+No API key. Install **Site health** from `/coop`, then in Settings list absolute origins (one per line, e.g. `https://example.com`). Optional label: `Blog | https://blog.example.com`. Each wake fetches `/robots.txt` and a few listed sitemaps.
+
+</details>
+
 ## How it works
 
 ```
 [Cron / dashboard / curl]
        │
        ▼
-   src/core/run.ts  ──> connectors (GitHub, Calendar, IMAP, GA4, yours)
+   src/core/run.ts  ──> connectors (GitHub, Calendar, IMAP, GA4, GSC, Site health, yours)
        │
        ▼
    sanitize + LLM  ──> terse executive brief

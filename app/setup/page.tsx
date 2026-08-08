@@ -1,6 +1,7 @@
 import { SetupForm } from "@/app/_components/setup-form";
 import { isEnvSet } from "@/app/_lib/format";
 import { loadGa4PickerState } from "@/app/_lib/ga4";
+import { loadGscPickerState } from "@/app/_lib/gsc";
 import { copy } from "@/src/copy";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { connectors } from "@/src/core/connectors";
@@ -73,6 +74,7 @@ export default async function SetupPage() {
   const selectedConnectorIds = loaded.config.connectors.map((entry) => entry.id);
   const keyGroups = buildKeyGroups(loaded.env);
   const ga4 = await loadGa4PickerState(loaded, rootDir);
+  const gsc = await loadGscPickerState(loaded, rootDir);
 
   return (
     <main className="flex flex-col gap-10">
@@ -122,7 +124,9 @@ export default async function SetupPage() {
         selectedConnectorIds={selectedConnectorIds}
         connectors={connectors
           .filter(
-            (connector) => !(connector.id === "ga4" && ga4.credentialsReady),
+            (connector) =>
+              !(connector.id === "ga4" && ga4.credentialsReady) &&
+              !(connector.id === "gsc" && gsc.credentialsReady),
           )
           .map((connector) => ({
             id: connector.id,
@@ -146,6 +150,12 @@ export default async function SetupPage() {
           initialProperties: ga4.properties,
           initialSelectedIds: ga4.selectedIds,
           initialError: ga4.error,
+        }}
+        gscPicker={{
+          credentialsReady: gsc.credentialsReady,
+          initialSites: gsc.sites,
+          initialSelectedUrls: gsc.selectedUrls,
+          initialError: gsc.error,
         }}
       />
     </main>

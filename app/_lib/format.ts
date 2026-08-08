@@ -90,6 +90,18 @@ export function formatBriefTime(iso: string, timezone: string): string {
   }).format(new Date(iso));
 }
 
+export function formatBriefDateTime(iso: string, timezone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(iso));
+}
+
 export function isEnvSet(name: string, env: NodeJS.ProcessEnv = process.env): boolean {
   const value = env[name];
   return value !== undefined && value.trim() !== "";

@@ -9,6 +9,10 @@ import {
   Ga4PropertyPicker,
   type Ga4PropertyPickerProps,
 } from "@/app/_components/ga4-property-picker";
+import {
+  GscSitePicker,
+  type GscSitePickerProps,
+} from "@/app/_components/gsc-site-picker";
 import type { LlmProviderOption } from "@/app/_components/preferences-form";
 import { copy } from "@/src/copy";
 
@@ -25,6 +29,7 @@ export interface SetupFormProps {
   llmProviders: LlmProviderOption[];
   deliveryChannels: Array<{ id: string; label: string }>;
   ga4Picker: Omit<Ga4PropertyPickerProps, "embedded">;
+  gscPicker: Omit<GscSitePickerProps, "embedded">;
 }
 
 export function SetupForm(props: SetupFormProps) {
@@ -86,6 +91,8 @@ export function SetupForm(props: SetupFormProps) {
       </section>
 
       <Ga4PropertyPicker {...props.ga4Picker} embedded />
+
+      <GscSitePicker {...props.gscPicker} embedded />
 
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-medium text-foreground">

@@ -1,5 +1,7 @@
 import { FoldableKeyGroup } from "@/app/_components/foldable-key-group";
 import { Ga4PropertyPicker } from "@/app/_components/ga4-property-picker";
+import { GscSitePicker } from "@/app/_components/gsc-site-picker";
+import { SiteHealthOriginsEditor } from "@/app/_components/site-health-origins-editor";
 import { AudioPreferences } from "@/app/_components/audio-preferences";
 import { PreferencesForm } from "@/app/_components/preferences-form";
 import {
@@ -10,12 +12,14 @@ import { SettingsSectionFold } from "@/app/_components/settings-section-fold";
 import { SourceLogo } from "@/app/_components/source-logo";
 import { isEnvSet } from "@/app/_lib/format";
 import { loadGa4PickerState } from "@/app/_lib/ga4";
+import { loadGscPickerState } from "@/app/_lib/gsc";
 import { copy } from "@/src/copy";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { deliveryChannels } from "@/src/core/delivery";
 import { labelForImapHost } from "@/src/core/imap-providers";
 import { llmProviders } from "@/src/core/llm";
 import { resolveConnectors } from "@/src/core/registry";
+import type { SiteHealthSite } from "@/src/core/connectors/site-health-shared";
 
 type KeyGroupStatus = "ready" | "needsKeys" | "stub" | "unused";
 
@@ -294,6 +298,36 @@ function KeyStatusBadge({
   );
 }
 
+function readSiteHealthSites(
+  connectors: Array<{ id: string; config: Record<string, unknown> }>,
+): SiteHealthSite[] {
+  const entry = connectors.find((connector) => connector.id === "site-health");
+  const raw = entry?.config?.sites;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const sites: SiteHealthSite[] = [];
+  for (const item of raw) {
+    if (
+      item &&
+      typeof item === "object" &&
+      "url" in item &&
+      typeof (item as { url: unknown }).url === "string"
+    ) {
+      const url = (item as { url: string }).url.trim();
+      if (!url) {
+        continue;
+      }
+      const name =
+        "name" in item && typeof (item as { name: unknown }).name === "string"
+          ? (item as { name: string }).name.trim()
+          : undefined;
+      sites.push(name ? { url, name } : { url });
+    }
+  }
+  return sites;
+}
+
 export default async function SettingsPage() {
   const rootDir = resolveRootDir();
   const loaded = await loadConfig({ rootDir });
@@ -306,6 +340,8 @@ export default async function SettingsPage() {
   const keyGroups = collectKeyGroups(loaded);
   const hasInstalledConnectors = loaded.config.connectors.length > 0;
   const ga4 = await loadGa4PickerState(loaded, rootDir);
+  const gsc = await loadGscPickerState(loaded, rootDir);
+  const siteHealthSites = readSiteHealthSites(loaded.config.connectors);
   const keysNeedingAttention = keyGroups.filter(
     (group) => group.status === "needsKeys",
   ).length;
@@ -409,6 +445,21 @@ export default async function SettingsPage() {
           initialSelectedIds={ga4.selectedIds}
           initialError={ga4.error}
         />
+      ) : null}
+
+      {loaded.config.connectors.some((connector) => connector.id === "gsc") ? (
+        <GscSitePicker
+          credentialsReady={gsc.credentialsReady}
+          initialSites={gsc.sites}
+          initialSelectedUrls={gsc.selectedUrls}
+          initialError={gsc.error}
+        />
+      ) : null}
+
+      {loaded.config.connectors.some(
+        (connector) => connector.id === "site-health",
+      ) ? (
+        <SiteHealthOriginsEditor initialSites={siteHealthSites} />
       ) : null}
 
       <AudioPreferences
