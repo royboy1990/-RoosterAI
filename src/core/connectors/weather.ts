@@ -21,7 +21,7 @@ export const weatherConnector: Connector<WeatherConfig> = {
   id: "weather",
   label: "Weather",
   description:
-    "Current conditions and today's high/low via Open-Meteo. No API key — set the city in Settings.",
+    "Current conditions via Open-Meteo. Set the city in Settings.",
   tags: ["weather"],
   setupDocs: "/settings",
   requiredEnv: [],
