@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { WeatherSnapshot } from "./weather/types";
 
 /** Short label the LLM sees as a section heading, e.g. "Google Analytics". */
 export interface ConnectorResult {
@@ -14,6 +15,11 @@ export interface RunContext {
   now: Date;
   /** Append a line to data/rooster.log (and usually stdout). */
   log: (message: string) => void;
+  /**
+   * City for weather (from rooster config). Empty = derive from timezone.
+   * Connector `locationOverride` still wins when set.
+   */
+  weatherLocation?: string;
 }
 
 /**
@@ -112,4 +118,6 @@ export interface BriefRecord {
   ttsError?: string;
   /** Set when delivery fails after the brief was already persisted. */
   deliveryError?: string;
+  /** Weather at wake time (when the weather connector succeeded). Spoken greeting only for the snapshot; written brief uses the connector section. */
+  weather?: WeatherSnapshot;
 }

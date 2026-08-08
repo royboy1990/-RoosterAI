@@ -2,6 +2,7 @@ import type { RoosterConfig } from "../config";
 import type { TtsVoice } from "./voices";
 import { writeBrief, writeBriefAudio } from "../store";
 import type { BriefRecord } from "../types";
+import type { WeatherSnapshot } from "../weather/types";
 import { synthesizeSpeech } from "./openai-speech";
 import { buildSpokenBrief } from "./speakable";
 
@@ -28,6 +29,7 @@ export async function synthesizeBriefMp3(options: {
   text: string;
   prefs: BriefAudioContext;
   now: Date;
+  weather?: WeatherSnapshot;
   signal?: AbortSignal;
   log?: (message: string) => void;
 }): Promise<Buffer> {
@@ -36,6 +38,7 @@ export async function synthesizeBriefMp3(options: {
     operatorName: options.prefs.operatorName,
     timezone: options.prefs.timezone,
     now: options.now,
+    weather: options.weather,
   });
   return synthesizeSpeech({
     text: spoken,
@@ -56,6 +59,7 @@ export async function createBriefAudioFile(options: {
   text: string;
   prefs: BriefAudioContext;
   now: Date;
+  weather?: WeatherSnapshot;
   signal?: AbortSignal;
   log?: (message: string) => void;
 }): Promise<{ audioRelativePath: string; ttsVoice: TtsVoice }> {
@@ -63,6 +67,7 @@ export async function createBriefAudioFile(options: {
     text: options.text,
     prefs: options.prefs,
     now: options.now,
+    weather: options.weather,
     signal: options.signal,
     log: options.log,
   });
@@ -93,6 +98,8 @@ export async function generateAndPersistBriefAudio(options: {
     text: options.brief.text,
     prefs: options.prefs,
     now,
+    // Prefer the snapshot from the original wake so regenerations stay consistent.
+    weather: options.brief.weather,
     signal: options.signal,
     log: options.log,
   });

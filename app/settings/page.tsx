@@ -485,6 +485,7 @@ export default async function SettingsPage() {
         </div>
         <PreferencesForm
           timezone={timezone}
+          weatherLocation={loaded.config.weatherLocation}
           operatorName={loaded.config.operatorName}
           scheduleHint={scheduleHint}
           llmProvider={llmProvider}

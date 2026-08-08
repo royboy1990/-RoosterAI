@@ -58,6 +58,8 @@ const roosterConfigSchema = z.object({
   /** When true, briefs are labeled [DEMO] and stored with demo: true. */
   demo: z.boolean().default(false),
   timezone: z.string().min(1).default("UTC"),
+  /** City name for weather; empty = derive from timezone. */
+  weatherLocation: z.string().max(120).default(""),
   /** Spoken greeting only — not injected into the written brief. */
   operatorName: z.string().max(OPERATOR_NAME_MAX).default(""),
   /** Per-connector AbortSignal.timeout budget in ms. */
@@ -158,8 +160,11 @@ export function hasRoosterConfig(rootDir: string = resolveRootDir()): boolean {
 export function buildDefaultConfig(env: NodeJS.ProcessEnv): RoosterConfig {
   const detected = connectorCatalog
     .filter((connector) => connector.id !== "demo")
-    // site-health has empty requiredEnv — never auto-install; stock from /coop.
-    .filter((connector) => connector.id !== "site-health")
+    // Empty requiredEnv — never auto-install; stock from /coop (or Settings location).
+    .filter(
+      (connector) =>
+        connector.id !== "site-health" && connector.id !== "weather",
+    )
     .filter((connector) => {
       if (!connector.requiredEnv.every((name) => envIsSet(name, env))) {
         return false;

@@ -319,6 +319,12 @@ export async function saveConfig(formData: FormData): Promise<ActionResult> {
         timezone: String(
           formData.get("timezone") ?? existing.timezone ?? "UTC",
         ).trim() || "UTC",
+        // Preferences form edits location; setup / other saves preserve it.
+        weatherLocation: formData.has("weatherLocation")
+          ? String(formData.get("weatherLocation") ?? "")
+              .trim()
+              .slice(0, 120)
+          : (existing.weatherLocation ?? ""),
         // Preferences form edits name; setup / other saves preserve it.
         operatorName: formData.has("operatorName")
           ? String(formData.get("operatorName") ?? "")

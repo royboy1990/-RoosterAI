@@ -80,4 +80,13 @@ export const connectorCatalog: readonly ConnectorCatalogEntry[] = [
     setupDocs: ".env.example",
     requiredEnv: [],
   },
+  {
+    id: "weather",
+    label: "Weather",
+    description:
+      "Current conditions and today's high/low via Open-Meteo. No API key — set the city in Settings.",
+    tags: ["weather"],
+    setupDocs: "/settings",
+    requiredEnv: [],
+  },
 ];

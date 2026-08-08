@@ -23,6 +23,11 @@ import type {
   RunContext,
   WakeMode,
 } from "./types";
+import {
+  fetchWeatherSnapshot,
+  resolveLocation,
+  type WeatherSnapshot,
+} from "./weather";
 
 function missingEnv(
   required: readonly string[],
@@ -178,6 +183,53 @@ async function gatherConnectors(
 }
 
 /**
+ * After a successful weather connector gather, re-read the snapshot from the
+ * shared day cache (no second network call). Fail-soft — never fails the wake.
+ */
+async function stashWeatherSnapshot(
+  loaded: LoadedConfig,
+  outcomes: ConnectorOutcome[],
+  ctx: RunContext,
+): Promise<WeatherSnapshot | undefined> {
+  const weatherOk = outcomes.some(
+    (o) => o.connectorId === "weather" && o.status === "ok",
+  );
+  if (!weatherOk) {
+    return undefined;
+  }
+
+  const entry = loaded.config.connectors.find((c) => c.id === "weather");
+  const override =
+    entry &&
+    typeof entry.config.locationOverride === "string"
+      ? entry.config.locationOverride.trim()
+      : "";
+
+  const locationQuery = resolveLocation(
+    {
+      weatherLocation: override || loaded.config.weatherLocation || "",
+    },
+    ctx.timezone,
+  );
+  if (!locationQuery) {
+    return undefined;
+  }
+
+  try {
+    return await fetchWeatherSnapshot({
+      locationQuery,
+      timezone: ctx.timezone,
+      now: ctx.now,
+      signal: ctx.signal,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    ctx.log(`weather snapshot stash failed (wake continues): ${message}`);
+    return undefined;
+  }
+}
+
+/**
  * Orchestration: gather → sanitize → summarize → persist → deliver.
  * No demo / dry-run branches — behavior comes from config + registries.
  */
@@ -210,6 +262,7 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
     timezone: config.timezone,
     now,
     log,
+    weatherLocation: config.weatherLocation,
   };
 
   if (source === "defaults") {
@@ -219,6 +272,7 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
 
   log(`${copy.pendingGather}`);
   const outcomes = await gatherConnectors(loaded, ctx);
+  const weather = await stashWeatherSnapshot(loaded, outcomes, ctx);
 
   const okResults: ConnectorResult[] = outcomes
     .filter((o) => o.status === "ok" && o.result)
@@ -334,6 +388,7 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
     llmError,
     wakeMode,
     baselineBriefId,
+    weather,
   };
 
   const openaiKey = loaded.env.OPENAI_API_KEY?.trim();
@@ -349,6 +404,7 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
         text: brief.text,
         prefs: audioPrefsFromConfig(config),
         now,
+        weather: brief.weather,
         signal: AbortSignal.any([
           runSignal,
           AbortSignal.timeout(config.ttsTimeoutMs),

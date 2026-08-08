@@ -22,6 +22,7 @@ export interface LlmProviderOption {
 
 export interface PreferencesFormProps {
   timezone: string;
+  weatherLocation: string;
   operatorName: string;
   scheduleHint: string;
   llmProvider: string;
@@ -50,6 +51,7 @@ interface PrefsSnapshot {
   llmModel: string;
   deliveryChannel: string;
   timezone: string;
+  weatherLocation: string;
   operatorName: string;
   scheduleHint: string;
   systemPrompt: string;
@@ -67,6 +69,7 @@ function snapshotFromProps(props: PreferencesFormProps): PrefsSnapshot {
     llmModel: props.llmModel,
     deliveryChannel: props.deliveryChannel,
     timezone: props.timezone,
+    weatherLocation: props.weatherLocation,
     operatorName: props.operatorName,
     scheduleHint: props.scheduleHint,
     systemPrompt: props.systemPrompt,
@@ -80,6 +83,8 @@ function snapshotsEqual(a: PrefsSnapshot, b: PrefsSnapshot): boolean {
     a.llmModel === b.llmModel &&
     a.deliveryChannel === b.deliveryChannel &&
     normalizePrefText(a.timezone) === normalizePrefText(b.timezone) &&
+    normalizePrefText(a.weatherLocation) ===
+      normalizePrefText(b.weatherLocation) &&
     normalizePrefText(a.operatorName) === normalizePrefText(b.operatorName) &&
     normalizePrefText(a.scheduleHint) === normalizePrefText(b.scheduleHint) &&
     normalizePrefText(a.systemPrompt) === normalizePrefText(b.systemPrompt) &&
@@ -100,6 +105,9 @@ export function PreferencesForm(props: PreferencesFormProps) {
   const [systemPrompt, setSystemPrompt] = useState(props.systemPrompt);
   const [overviewPrompt, setOverviewPrompt] = useState(props.overviewPrompt);
   const [timezone, setTimezone] = useState(props.timezone);
+  const [weatherLocation, setWeatherLocation] = useState(
+    props.weatherLocation,
+  );
   const [operatorName, setOperatorName] = useState(props.operatorName);
   const [scheduleHint, setScheduleHint] = useState(props.scheduleHint);
   const [baseline, setBaseline] = useState<PrefsSnapshot>(() =>
@@ -118,6 +126,7 @@ export function PreferencesForm(props: PreferencesFormProps) {
     llmModel,
     deliveryChannel,
     timezone,
+    weatherLocation,
     operatorName,
     scheduleHint,
     systemPrompt,
@@ -136,6 +145,7 @@ export function PreferencesForm(props: PreferencesFormProps) {
       setLlmModel(propsSnapshot.llmModel);
       setDeliveryChannel(propsSnapshot.deliveryChannel);
       setTimezone(propsSnapshot.timezone);
+      setWeatherLocation(propsSnapshot.weatherLocation);
       setOperatorName(propsSnapshot.operatorName);
       setScheduleHint(propsSnapshot.scheduleHint);
       setSystemPrompt(propsSnapshot.systemPrompt);
@@ -200,6 +210,7 @@ export function PreferencesForm(props: PreferencesFormProps) {
               llmModel,
               deliveryChannel,
               timezone,
+              weatherLocation,
               operatorName,
               scheduleHint,
               systemPrompt,
@@ -315,6 +326,25 @@ export function PreferencesForm(props: PreferencesFormProps) {
             </button>
           </div>
           <p className="text-xs text-muted">{copy.settings.timezoneHint}</p>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted">{copy.settings.weatherLocation}</span>
+          <input
+            name="weatherLocation"
+            value={weatherLocation}
+            onChange={(event) =>
+              setWeatherLocation(event.target.value.slice(0, 120))
+            }
+            maxLength={120}
+            className="rounded border border-border bg-background px-3 py-2 text-foreground"
+            placeholder="Tel Aviv"
+            spellCheck={false}
+            autoComplete="address-level2"
+          />
+          <p className="text-xs text-muted">
+            {copy.settings.weatherLocationHint}
+          </p>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
