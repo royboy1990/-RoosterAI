@@ -6,7 +6,7 @@
  */
 import { copy } from "../src/copy";
 import { resolveRootDir } from "../src/core/config";
-import { SHOWCASE_BRIEF_TEXT, SHOWCASE_DEMO_LINES } from "../src/core/demo/showcase-brief";
+import { SHOWCASE_BRIEF_TEXT, SHOWCASE_DEMO_LINES, SHOWCASE_PECKS } from "../src/core/demo/showcase-brief";
 import { toBriefId, writeBrief } from "../src/core/store";
 import type { BriefRecord } from "../src/core/types";
 
@@ -41,6 +41,7 @@ async function main(): Promise<void> {
     llmProviderId: "stub",
     deliveryChannelId: "file",
     wakeMode: "full",
+    pecks: [...SHOWCASE_PECKS],
   };
 
   const filePath = await writeBrief(rootDir, brief);

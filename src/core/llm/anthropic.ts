@@ -1,7 +1,16 @@
-import type { LlmCompleteInput, LlmProvider, RunContext } from "../types";
+import type {
+  LlmCompleteInput,
+  LlmCompletion,
+  LlmProvider,
+  RunContext,
+} from "../types";
 
 interface AnthropicMessageResponse {
   content?: Array<{ type?: string; text?: string }>;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
   error?: { message?: string; type?: string };
 }
 
@@ -19,7 +28,7 @@ export const anthropicProvider: LlmProvider = {
   async complete(
     input: LlmCompleteInput,
     ctx: RunContext,
-  ): Promise<string> {
+  ): Promise<LlmCompletion> {
     const apiKey = process.env.ANTHROPIC_API_KEY!.trim();
     const url = "https://api.anthropic.com/v1/messages";
     ctx.log(`llm anthropic: POST ${url} model=${input.model}`);
@@ -55,6 +64,14 @@ export const anthropicProvider: LlmProvider = {
     if (!text) {
       throw new Error("Anthropic response missing text content blocks");
     }
-    return text;
+
+    const inputTokens = raw.usage?.input_tokens;
+    const outputTokens = raw.usage?.output_tokens;
+    const usage =
+      typeof inputTokens === "number" && typeof outputTokens === "number"
+        ? { inputTokens, outputTokens }
+        : undefined;
+
+    return { text, usage };
   },
 };

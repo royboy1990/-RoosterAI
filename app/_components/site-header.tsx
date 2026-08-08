@@ -116,6 +116,9 @@ export function SiteHeader({
             <Link href="/history" className="hover:text-foreground">
               {copy.nav.history}
             </Link>
+            <Link href="/ask" className="hover:text-foreground">
+              {copy.nav.ask}
+            </Link>
             <Link href="/coop" className="hover:text-foreground">
               {copy.nav.coop}
             </Link>

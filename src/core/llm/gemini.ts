@@ -1,4 +1,9 @@
-import type { LlmCompleteInput, LlmProvider, RunContext } from "../types";
+import type {
+  LlmCompleteInput,
+  LlmCompletion,
+  LlmProvider,
+  RunContext,
+} from "../types";
 
 interface GeminiGenerateResponse {
   candidates?: Array<{
@@ -6,6 +11,10 @@ interface GeminiGenerateResponse {
       parts?: Array<{ text?: string }>;
     };
   }>;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+  };
   error?: { message?: string; status?: string };
 }
 
@@ -23,7 +32,7 @@ export const geminiProvider: LlmProvider = {
   async complete(
     input: LlmCompleteInput,
     ctx: RunContext,
-  ): Promise<string> {
+  ): Promise<LlmCompletion> {
     const apiKey = process.env.GEMINI_API_KEY!.trim();
     const model = input.model.trim() || geminiProvider.defaultModel;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -67,6 +76,14 @@ export const geminiProvider: LlmProvider = {
     if (!text) {
       throw new Error("Gemini response missing candidates[0].content.parts text");
     }
-    return text;
+
+    const inputTokens = raw.usageMetadata?.promptTokenCount;
+    const outputTokens = raw.usageMetadata?.candidatesTokenCount;
+    const usage =
+      typeof inputTokens === "number" && typeof outputTokens === "number"
+        ? { inputTokens, outputTokens }
+        : undefined;
+
+    return { text, usage };
   },
 };

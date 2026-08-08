@@ -61,7 +61,7 @@ export default async function HistoryPage() {
             {dayBriefs.map((brief) => (
               <li key={brief.id}>
                 <Link
-                  href="/"
+                  href={`/brief/${encodeURIComponent(brief.id)}`}
                   className="flex flex-col gap-1 rounded border border-border bg-surface/80 px-3 py-3 backdrop-blur-md transition hover:border-accent/40"
                 >
                   <div className="flex flex-wrap items-center gap-2 text-sm">

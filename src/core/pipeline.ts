@@ -10,16 +10,24 @@ import {
   resolveUnknownInstalled,
 } from "./registry";
 import { buildDigest, sanitizeResult } from "./sanitize";
+import { generatePecks } from "./pecks/generate";
+import {
+  buildBriefUsage,
+  estimateChatUsd,
+} from "./pricing/estimate";
 import { appendLog, toBriefId, writeBrief } from "./store";
 import {
   audioPrefsFromConfig,
+  briefTtsUsageFromAudio,
   createBriefAudioFile,
 } from "./tts/brief-audio";
 import type {
   BriefRecord,
+  BriefUsage,
   ConnectorOutcome,
   ConnectorResult,
   CoopStatus,
+  LlmUsage,
   RunContext,
   WakeMode,
 } from "./types";
@@ -313,6 +321,7 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
   let text: string;
   let llmFailed = false;
   let llmError: string | undefined;
+  let llmUsage: LlmUsage | undefined;
 
   // Skip the LLM when there is nothing to summarize (empty coop / all needsKeys / all failed).
   const skipLlm = okResults.length === 0;
@@ -351,7 +360,7 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
       ]),
     };
     try {
-      text = await llm.complete(
+      const completion = await llm.complete(
         {
           system,
           user,
@@ -359,6 +368,8 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
         },
         llmCtx,
       );
+      text = completion.text;
+      llmUsage = completion.usage;
     } catch (err) {
       llmFailed = true;
       llmError = err instanceof Error ? err.message : String(err);
@@ -369,6 +380,35 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
 
   if (config.demo) {
     text = `${copy.demoMarker}\n${text}`;
+  }
+
+  // Pecks from final text + digest — before TTS / first writeBrief.
+  // Skip unchanged / empty / LLM-failed wakes; fail-soft otherwise.
+  let pecks: string[] | undefined;
+  let pecksError: string | undefined;
+  const shouldGeneratePecks =
+    config.pecksEnabled &&
+    wakeMode !== "unchanged" &&
+    !skipLlm &&
+    !llmFailed;
+
+  if (shouldGeneratePecks) {
+    const peckResult = await generatePecks({
+      loaded,
+      text,
+      digest,
+      runSignal,
+      ctx,
+    });
+    if (peckResult.pecks.length > 0) {
+      pecks = peckResult.pecks;
+    }
+    if (peckResult.pecksError) {
+      pecksError = peckResult.pecksError;
+      log(`pecks failed (wake continues): ${peckResult.pecksError}`);
+    } else if (pecks && pecks.length > 0) {
+      log(`pecks: ${pecks.length} question(s)`);
+    }
   }
 
   const brief: BriefRecord = {
@@ -389,7 +429,25 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
     wakeMode,
     baselineBriefId,
     weather,
+    pecks,
+    pecksError,
   };
+
+  let llmUsageLeg: BriefUsage["llm"] | undefined;
+  if (llmUsage) {
+    llmUsageLeg = {
+      model: config.llm.model,
+      inputTokens: llmUsage.inputTokens,
+      outputTokens: llmUsage.outputTokens,
+      estimatedUsd: estimateChatUsd(
+        config.llm.model,
+        llmUsage.inputTokens,
+        llmUsage.outputTokens,
+      ),
+    };
+  }
+
+  let ttsUsageLeg: BriefUsage["tts"] | undefined;
 
   const openaiKey = loaded.env.OPENAI_API_KEY?.trim();
   if (
@@ -413,6 +471,7 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
       });
       brief.audioRelativePath = audio.audioRelativePath;
       brief.ttsVoice = audio.ttsVoice;
+      ttsUsageLeg = briefTtsUsageFromAudio(audio);
       log(`tts: saved ${audio.audioRelativePath} voice=${audio.ttsVoice}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -420,6 +479,8 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
       log(`tts failed (wake continues): ${message}`);
     }
   }
+
+  brief.usage = buildBriefUsage({ llm: llmUsageLeg, tts: ttsUsageLeg });
 
   const filePath = await writeBrief(rootDir, brief);
   log(`Persisted brief → ${filePath} · Coop Status: ${brief.status}`);

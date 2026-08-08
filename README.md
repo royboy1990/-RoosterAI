@@ -46,7 +46,36 @@ Dark, glassy UI with a live clock, optional weather backdrop, **Coop Status**, a
   </tr>
 </table>
 
-Scroll below the brief on **Latest** for **Connector outcomes** — raw per-source payloads before the LLM synthesis. **Preferences** (LLM, delivery, timezone, prompts) live in the open panel at the bottom of Settings.
+Scroll below the brief on **Latest** for **Pecks** (quiet follow-up chips), **Ask** (evidence-grounded chat), **Recent chats**, and **Connector outcomes** — raw per-source payloads before the LLM synthesis. **Preferences** (LLM, delivery, timezone, prompts) live in the open panel at the bottom of Settings.
+
+## Pecks + Ask
+
+Two separate objects:
+
+| Object | What it is |
+|--------|------------|
+| **Brief + Pecks** | Durable morning snapshot and 0–3 stable questions for *that* brief |
+| **Chat threads** | Independent exploration at `/ask/[id]`; context frozen at creation |
+
+**Pecks** appear under the brief prose (heading **Pecks**, hint *Questions worth asking about this brief*). First click on a chip creates a chat; later clicks reopen that same Peck + source-brief thread. Free-form Ask always starts a new thread. Calm mornings may show fewer or zero chips (the section hides when empty). Demo / stub wakes use canned showcase pecks.
+
+**Ask** digs deeper than rephrasing the prose. Each thread freezes `contextBriefIds` (source brief + preceding substantive briefs, default up to 7) so later wakes do not silently change yesterday’s chat. Answers stay plain; the UI links source brief day(s) under each reply. History rows also open `/brief/[id]`.
+
+Ask requires a **real LLM** with credentials. Stub / demo-only modes show Pecks but **disable Ask** (no silent stub answers). You can also turn either feature off independently in `rooster.config.json`:
+
+| Knob | Default | Notes |
+|------|---------|--------|
+| `pecksEnabled` | `true` | Skip pecks generation on wake when false |
+| `askEnabled` | `true` | Hide Ask entry when false |
+| `chatContextBriefs` | `7` (max 7) | Briefs frozen into a new chat |
+| `pecksTimeoutMs` | `20000` | Fail-soft; wake continues on timeout |
+| `askTimeoutMs` | `60000` | Per Ask turn |
+| `askMaxUserMessageChars` | `4000` | Request limit |
+| `askMaxAssistantChars` | `8000` | Soft reply cap |
+| `askContextCharBudget` | `24000` | Evidence assembly budget |
+| `chatMaxStoredMessages` | `40` | Older turns pruned |
+
+TTS sign-offs are unchanged — pecks are never spoken.
 
 ## Tier 0 — hatch a demo brief (no keys)
 
@@ -58,7 +87,7 @@ npm run wake -- --demo
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). First run lands on **Stock the Coop** (`/coop`) — pick sources, or hit **Just show me the demo**. You should see a labeled `[DEMO]` brief — canned data, stub LLM, file delivery. Same pipeline as a real run; zero network, zero secrets.
+Open [http://localhost:3000](http://localhost:3000). First run lands on **Stock the Coop** (`/coop`) — pick sources, or hit **Just show me the demo**. You should see a labeled `[DEMO]` brief — canned data, stub LLM, file delivery. Same pipeline as a real run; zero network, zero secrets. Demo briefs include sample **Pecks**; **Ask** stays disabled until a real LLM key is configured.
 
 Primary action everywhere: **Wake the Flock Up** (`npm run wake`).
 
@@ -363,11 +392,16 @@ No API key. Install **Site health** from `/coop`, then in Settings list absolute
    sanitize + LLM  ──> terse executive brief
        │
        ▼
+   optional Pecks  ──> 0–3 grounded questions (fail-soft; not spoken)
+       │
+       ▼
    optional TTS    ──> data/audio/<id>.mp3 (OpenAI speech; fail-soft)
        │
        ▼
    Telegram / file ──> data/briefs/<timestamp>.json + phone
 ```
+
+Ask threads live separately under `data/chats/` with frozen `contextBriefIds` — not rewritten when a new wake lands.
 
 After gathering, Rooster compares today’s digest to the last usable brief — unchanged mornings skip the LLM; otherwise the model still writes a full morning brief (with a short memory packet when something moved). Handy if you Wake more than once a day: you still get a morning brief, not a rewrite of the same digest.
 
@@ -415,7 +449,7 @@ Local **Wake the Flock Up** / `npm run wake` do not need this token.
 - **Secret scan** → `npm run check:secrets` (also runs on PR/push via GitHub Actions) looks for known token shapes so keys do not land in the tree.
 - **Preferences** → `rooster.config.json` (gitignored; copy from `rooster.config.example.json`, or let `/coop` create it). Sparse `connectors[]` — installed only. Model, delivery, timezone, schedule hint, operator name, TTS prefs, and briefing prompts live on Settings.
 - **Timezone** → IANA string in config (e.g. `Asia/Jerusalem`). Used for the header clock, calendar “today”, GA4 day boundaries, and spoken daypart greetings. If still `UTC`, the dashboard adopts your browser zone once; Settings also has **Use browser timezone**.
-- **Local-only (never commit)** → `.env`, `rooster.config.json`, `data/` (briefs + spoken MP3s), `*ga4-service-account.json`, plus IDE agent files `AGENTS.md` / `CLAUDE.md`.
+- **Local-only (never commit)** → `.env`, `rooster.config.json`, `data/` (briefs + chats + spoken MP3s), `*ga4-service-account.json`, plus IDE agent files `AGENTS.md` / `CLAUDE.md`.
 
 ## A note from the coop
 

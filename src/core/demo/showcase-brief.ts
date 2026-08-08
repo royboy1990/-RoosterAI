@@ -56,6 +56,13 @@ export const SHOWCASE_BRIEF_TEXT = `### Attention Today
 4. Pay Invoice #4412 before Friday
 `;
 
+/** Canned Pecks for demo / stub wakes and showcase seed. */
+export const SHOWCASE_PECKS: string[] = [
+  "Does the Northwind proposal need a reply before today's review, or can it wait?",
+  "Is GameFoundry's traffic spike a campaign lift or bot noise?",
+  "What's blocking the overdue connector docs, and does it affect the spoken brief?",
+];
+
 /** Digest lines shown in connector outcomes for the Demo Farm source. */
 export const SHOWCASE_DEMO_LINES: string[] = [
   "Sessions yesterday: 1,284 (↑12% vs prior day) across GameFoundry, Baseplate, Docs",

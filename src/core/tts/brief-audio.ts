@@ -1,7 +1,8 @@
 import type { RoosterConfig } from "../config";
 import type { TtsVoice } from "./voices";
+import { estimateTtsUsd, mergeTtsUsage } from "../pricing/estimate";
 import { writeBrief, writeBriefAudio } from "../store";
-import type { BriefRecord } from "../types";
+import type { BriefRecord, BriefUsage } from "../types";
 import type { WeatherSnapshot } from "../weather/types";
 import { synthesizeSpeech } from "./openai-speech";
 import { buildSpokenBrief } from "./speakable";
@@ -22,6 +23,12 @@ export function audioPrefsFromConfig(
   };
 }
 
+export interface SynthesizeBriefMp3Result {
+  buffer: Buffer;
+  inputChars: number;
+  model: string;
+}
+
 /**
  * Shared speakable + synthesize used by the wake pipeline and on-demand generate.
  */
@@ -32,7 +39,7 @@ export async function synthesizeBriefMp3(options: {
   weather?: WeatherSnapshot;
   signal?: AbortSignal;
   log?: (message: string) => void;
-}): Promise<Buffer> {
+}): Promise<SynthesizeBriefMp3Result> {
   const spoken = buildSpokenBrief({
     text: options.text,
     operatorName: options.prefs.operatorName,
@@ -40,13 +47,25 @@ export async function synthesizeBriefMp3(options: {
     now: options.now,
     weather: options.weather,
   });
-  return synthesizeSpeech({
+  const result = await synthesizeSpeech({
     text: spoken,
     voice: options.prefs.ttsVoice,
     operatorName: options.prefs.operatorName,
     signal: options.signal,
     log: options.log,
   });
+  return {
+    buffer: result.buffer,
+    inputChars: result.inputChars,
+    model: result.model,
+  };
+}
+
+export interface CreateBriefAudioResult {
+  audioRelativePath: string;
+  ttsVoice: TtsVoice;
+  inputChars: number;
+  model: string;
 }
 
 /**
@@ -62,7 +81,7 @@ export async function createBriefAudioFile(options: {
   weather?: WeatherSnapshot;
   signal?: AbortSignal;
   log?: (message: string) => void;
-}): Promise<{ audioRelativePath: string; ttsVoice: TtsVoice }> {
+}): Promise<CreateBriefAudioResult> {
   const mp3 = await synthesizeBriefMp3({
     text: options.text,
     prefs: options.prefs,
@@ -74,15 +93,27 @@ export async function createBriefAudioFile(options: {
   const audioRelativePath = await writeBriefAudio(
     options.rootDir,
     options.briefId,
-    mp3,
+    mp3.buffer,
   );
   return {
     audioRelativePath,
     ttsVoice: options.prefs.ttsVoice,
+    inputChars: mp3.inputChars,
+    model: mp3.model,
   };
 }
 
-/** On-demand path: synthesize, write mp3, patch brief JSON. */
+function ttsUsageFromAudio(
+  audio: CreateBriefAudioResult,
+): NonNullable<BriefUsage["tts"]> {
+  return {
+    model: audio.model,
+    inputChars: audio.inputChars,
+    estimatedUsd: estimateTtsUsd(audio.model, audio.inputChars),
+  };
+}
+
+/** On-demand path: synthesize, write mp3, patch brief JSON (merge TTS usage). */
 export async function generateAndPersistBriefAudio(options: {
   rootDir: string;
   brief: BriefRecord;
@@ -109,7 +140,15 @@ export async function generateAndPersistBriefAudio(options: {
     audioRelativePath: audio.audioRelativePath,
     ttsVoice: audio.ttsVoice,
     ttsError: undefined,
+    usage: mergeTtsUsage(options.brief.usage, ttsUsageFromAudio(audio)),
   };
   await writeBrief(options.rootDir, next);
   return next;
+}
+
+/** Build TTS leg for wake-time attachment (each-wake path). */
+export function briefTtsUsageFromAudio(
+  audio: CreateBriefAudioResult,
+): NonNullable<BriefUsage["tts"]> {
+  return ttsUsageFromAudio(audio);
 }

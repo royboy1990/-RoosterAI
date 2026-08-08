@@ -72,6 +72,24 @@ const roosterConfigSchema = z.object({
   ttsTimeoutMs: z.number().int().positive().default(60_000),
   /** Delivery stage AbortSignal.timeout budget in ms. */
   deliveryTimeoutMs: z.number().int().positive().default(30_000),
+  /** Generate follow-up Pecks after the brief text (fail-soft). */
+  pecksEnabled: z.boolean().default(true),
+  /** Allow Ask chats grounded in stored briefs (independent of pecksEnabled). */
+  askEnabled: z.boolean().default(true),
+  /** How many substantive briefs to freeze into a new chat's context window. */
+  chatContextBriefs: z.number().int().min(1).max(7).default(7),
+  /** Pecks generation AbortSignal.timeout budget in ms. */
+  pecksTimeoutMs: z.number().int().positive().default(20_000),
+  /** Ask LLM AbortSignal.timeout budget in ms. */
+  askTimeoutMs: z.number().int().positive().default(60_000),
+  /** Max characters accepted for a single Ask user message. */
+  askMaxUserMessageChars: z.number().int().positive().default(4_000),
+  /** Soft cap on assistant reply length (truncated if longer). */
+  askMaxAssistantChars: z.number().int().positive().default(8_000),
+  /** Per-request evidence assembly budget (chars) for Ask. */
+  askContextCharBudget: z.number().int().positive().default(24_000),
+  /** Max messages kept per chat; older turns are pruned. */
+  chatMaxStoredMessages: z.number().int().positive().default(40),
   /** Max characters kept per connector after sanitize. */
   perConnectorCharBudget: z.number().int().positive().default(4_000),
   /** Sparse — installed connectors only. Empty is a valid intermediate state. */

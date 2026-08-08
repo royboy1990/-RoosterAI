@@ -1,11 +1,9 @@
-import { BriefProse } from "@/app/_components/brief-prose";
-import { BriefAudioButton } from "@/app/_components/brief-audio-button";
+import { BriefView } from "@/app/_components/brief-view";
 import { DefaultsBanner } from "@/app/_components/defaults-banner";
-import { DemoBanner } from "@/app/_components/demo-banner";
-import { OutcomeList } from "@/app/_components/outcome-list";
 import { WakeButton } from "@/app/_components/wake-button";
-import { formatBriefDateTime, formatBriefTime } from "@/app/_lib/format";
 import { copy } from "@/src/copy";
+import { isAskLlmAvailable } from "@/src/core/ask/availability";
+import { loadRecentChats } from "@/src/core/ask/recent";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { readLatestBrief, resolveSubstantiveBrief } from "@/src/core/store";
 
@@ -36,49 +34,27 @@ export default async function HomePage() {
     brief.wakeMode === "unchanged" && bodyBrief.id !== brief.id;
   const showAudioButton =
     loaded.config.ttsEnabled || Boolean(bodyBrief.audioRelativePath);
+  const askAvailable = isAskLlmAvailable(loaded);
+  const recentChats = await loadRecentChats(rootDir, bodyBrief.demo);
 
   return (
-    <main className="flex flex-col gap-6">
-      {runningDefaults ? <DefaultsBanner /> : null}
-
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {copy.latest.title}
-        </h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="metric-mono text-xs text-muted">
-            {formatBriefDateTime(brief.createdAt, brief.timezone)}
-          </p>
-          {showAudioButton ? (
-            <BriefAudioButton
-              key={bodyBrief.id}
-              briefId={bodyBrief.id}
-              hasAudio={Boolean(bodyBrief.audioRelativePath)}
-              briefVoice={bodyBrief.ttsVoice}
-              settingsVoice={loaded.config.ttsVoice}
-            />
-          ) : null}
+    <>
+      {runningDefaults ? (
+        <div className="mb-6">
+          <DefaultsBanner />
         </div>
-        {showingPrior ? (
-          <p className="text-sm text-muted">
-            {copy.latest.unchangedNotice(
-              formatBriefTime(bodyBrief.createdAt, bodyBrief.timezone),
-            )}
-          </p>
-        ) : null}
-      </div>
-
-      {bodyBrief.demo ? <DemoBanner /> : null}
-
-      <article className="brief-prose rounded border border-border bg-surface/80 px-4 py-4 text-[15px] text-foreground backdrop-blur-md">
-        <BriefProse text={bodyBrief.text} />
-      </article>
-
-      <OutcomeList
-        outcomes={brief.outcomes}
-        llmFailed={brief.llmFailed}
-        llmError={brief.llmError}
+      ) : null}
+      <BriefView
+        brief={brief}
+        bodyBrief={bodyBrief}
+        title={copy.latest.title}
+        showingPrior={showingPrior}
+        showAudioButton={showAudioButton}
+        settingsVoice={loaded.config.ttsVoice}
+        askEnabled={loaded.config.askEnabled}
+        askAvailable={askAvailable}
+        recentChats={recentChats}
       />
-    </main>
+    </>
   );
 }

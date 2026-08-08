@@ -2,9 +2,16 @@ import type { TtsVoice } from "./voices";
 
 /** Always OpenAI's speech host — independent of OPENAI_BASE_URL used for chat. */
 const OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech";
-const SPEECH_MODEL = "gpt-4o-mini-tts";
+export const SPEECH_MODEL = "gpt-4o-mini-tts";
 /** Typical OpenAI speech input limit; briefs usually fit. */
 export const SPEECH_INPUT_MAX_CHARS = 4096;
+
+export interface SynthesizeSpeechResult {
+  buffer: Buffer;
+  /** Characters actually sent after truncation. */
+  inputChars: number;
+  model: string;
+}
 
 export interface SynthesizeSpeechInput {
   text: string;
@@ -31,7 +38,7 @@ function buildInstructions(operatorName: string): string {
  */
 export async function synthesizeSpeech(
   input: SynthesizeSpeechInput,
-): Promise<Buffer> {
+): Promise<SynthesizeSpeechResult> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is missing — cannot synthesize speech.");
@@ -80,5 +87,9 @@ export async function synthesizeSpeech(
   }
 
   const arrayBuffer = await res.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  return {
+    buffer: Buffer.from(arrayBuffer),
+    inputChars: text.length,
+    model: SPEECH_MODEL,
+  };
 }

@@ -52,13 +52,42 @@ export interface LlmCompleteInput {
   model: string;
 }
 
+/** Token counts from a provider response when the API reports them. */
+export interface LlmUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/** Result of LlmProvider.complete — text plus optional usage for cost estimates. */
+export interface LlmCompletion {
+  text: string;
+  usage?: LlmUsage;
+}
+
 export interface LlmProvider extends ProviderMeta {
   id: string;
   label: string;
   /** Model id applied when this provider is auto-selected or first chosen. */
   defaultModel: string;
   requiredEnv: readonly string[];
-  complete(input: LlmCompleteInput, ctx: RunContext): Promise<string>;
+  complete(input: LlmCompleteInput, ctx: RunContext): Promise<LlmCompletion>;
+}
+
+/** Frozen cost snapshot written with the brief (stable if the price table later changes). */
+export interface BriefUsage {
+  llm?: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedUsd: number | null;
+  };
+  tts?: {
+    model: string;
+    inputChars: number;
+    estimatedUsd: number | null;
+  };
+  /** Sum when any leg is priced; null if nothing priced. */
+  estimatedUsd: number | null;
 }
 
 export interface DeliveryPayload {
@@ -120,4 +149,32 @@ export interface BriefRecord {
   deliveryError?: string;
   /** Weather at wake time (when the weather connector succeeded). Spoken greeting only for the snapshot; written brief uses the connector section. */
   weather?: WeatherSnapshot;
+  /** 0–3 follow-up questions grounded in this brief's text + digest. */
+  pecks?: string[];
+  /** Fail-soft pecks generation error (wake still succeeds). */
+  pecksError?: string;
+  /** Local $ estimate from public list prices at write time (not a provider invoice). */
+  usage?: BriefUsage;
+}
+
+export type ChatMessageRole = "user" | "assistant";
+
+export interface ChatMessage {
+  role: ChatMessageRole;
+  content: string;
+  /** Brief ids the assistant cited for this turn (assistant only). */
+  sourceBriefIds?: string[];
+}
+
+/** Persisted Ask thread under data/chats/<id>.json. */
+export interface ChatRecord {
+  id: string;
+  createdAt: string;
+  title: string;
+  demo: boolean;
+  /** Brief that opened the thread (e.g. peck source). */
+  sourceBriefId?: string;
+  /** Frozen at thread creation — never silently refreshed on later wakes. */
+  contextBriefIds: string[];
+  messages: ChatMessage[];
 }

@@ -39,7 +39,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const bytes = await synthesizeSpeech({
+    const speech = await synthesizeSpeech({
       text: voicePreviewText(operatorName),
       voice,
       operatorName,
@@ -47,13 +47,13 @@ export async function GET(request: Request): Promise<Response> {
         console.log(message);
       },
     });
-    return new NextResponse(new Uint8Array(bytes), {
+    return new NextResponse(new Uint8Array(speech.buffer), {
       status: 200,
       headers: {
         "Content-Type": "audio/mpeg",
         // Browser may reuse the same sample within a day; client also caches blobs.
         "Cache-Control": "private, max-age=86400",
-        "Content-Length": String(bytes.byteLength),
+        "Content-Length": String(speech.buffer.byteLength),
       },
     });
   } catch (err) {

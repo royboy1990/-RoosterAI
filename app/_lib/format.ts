@@ -114,3 +114,45 @@ export function isEnvSet(name: string, env: NodeJS.ProcessEnv = process.env): bo
   const value = env[name];
   return value !== undefined && value.trim() !== "";
 }
+
+/**
+ * Local $ estimate formatting.
+ * $0.00 · $0.0001 · $0.012 · $1.23
+ */
+export function formatUsdEstimate(usd: number): string {
+  if (!Number.isFinite(usd)) {
+    return "—";
+  }
+  if (usd === 0) {
+    return "$0.00";
+  }
+  const abs = Math.abs(usd);
+  // Sub-tenth-cent amounts (short TTS clips) need more than 3 decimals
+  // or they collapse to "$0.000" and look like missing pricing.
+  if (abs < 0.001) {
+    return `$${usd.toFixed(4)}`;
+  }
+  if (abs < 1) {
+    return `$${usd.toFixed(3)}`;
+  }
+  return `$${usd.toFixed(2)}`;
+}
+
+/** Compact token counts for unknown-price cost lines, e.g. 12.4k. */
+export function formatTokenCount(n: number): string {
+  if (!Number.isFinite(n) || n < 0) {
+    return "0";
+  }
+  if (n < 1000) {
+    return String(Math.round(n));
+  }
+  const k = n / 1000;
+  if (k < 10) {
+    return `${k.toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  if (k < 1000) {
+    return `${Math.round(k)}k`;
+  }
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+}
+
