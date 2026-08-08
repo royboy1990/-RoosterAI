@@ -423,11 +423,7 @@ export function RoosterFmDock() {
           <p className="mt-2 text-xs text-muted" role="status">
             {libraryMessage}
           </p>
-        ) : (
-          <p className="mt-2 text-[11px] text-muted/80">
-            {copy.roosterFm.libraryHint}
-          </p>
-        )}
+        ) : null}
       </div>
     </div>
   );

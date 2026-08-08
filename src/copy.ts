@@ -268,8 +268,6 @@ export const copy = {
     removeTrack: "Remove",
     restoreSeed: "Restore seeds",
     dropHint: "Drop audio to add…",
-    libraryHint:
-      "Personal tracks stay in this browser only. Remove hides a seed from your player (file stays in the project).",
   },
   ga4: {
     heading: "Google Analytics properties",
