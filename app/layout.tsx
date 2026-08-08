@@ -12,6 +12,7 @@ import {
 import { PreferencesSaveProvider } from "@/app/_components/preferences-save-context";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { readLatestBrief } from "@/src/core/store";
+import { loadHeaderWeather } from "@/src/core/weather";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,6 +41,12 @@ export default async function RootLayout({
   const latest = await readLatestBrief(rootDir);
   const loaded = await loadConfig({ rootDir });
   const timezone = loaded.config.timezone;
+  const now = new Date();
+  const weather = await loadHeaderWeather({
+    weatherLocation: loaded.config.weatherLocation,
+    timezone,
+    now,
+  });
 
   return (
     <html
@@ -55,14 +62,14 @@ export default async function RootLayout({
               <SiteHeader
                 status={latest?.status ?? null}
                 timezone={timezone}
-                now={new Date()}
+                now={now}
+                weather={weather}
               />
               <WakeResultBanner />
               <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-3xl flex-1 flex-col px-6 py-8 pb-28">
                 {children}
               </div>
-              <RoosterFmDock />
-            </PreferencesSaveProvider>
+              <RoosterFmDock />            </PreferencesSaveProvider>
           </WakeProvider>
         </RoosterFMProvider>
       </body>

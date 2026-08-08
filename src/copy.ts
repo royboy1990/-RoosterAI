@@ -182,6 +182,9 @@ export const copy = {
     timezoneHint:
       "IANA zone used for the clock, calendar “today”, and GA4 day boundaries. Leave as UTC and the dashboard will pick up your browser zone once.",
     timezoneUseBrowser: "Use browser timezone",
+    weatherLocation: "Weather location",
+    weatherLocationHint:
+      "City name for the weather connector, spoken greeting, and header backdrop. Leave empty to derive from your timezone (e.g. Asia/Jerusalem → Jerusalem).",
     operatorName: "Your name",
     operatorNameHint:
       "Optional. Used only in the spoken greeting (Good morning, Roy.) — not in the written brief.",

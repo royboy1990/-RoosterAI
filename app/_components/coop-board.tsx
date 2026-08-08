@@ -29,6 +29,9 @@ function docsHref(setupDocs: string): string {
   if (setupDocs.startsWith("http://") || setupDocs.startsWith("https://")) {
     return setupDocs;
   }
+  if (setupDocs.startsWith("/")) {
+    return setupDocs;
+  }
   const path = setupDocs.replace(/^\.\//, "");
   return `https://github.com/royboy1990/-RoosterAI/blob/main/${path}`;
 }

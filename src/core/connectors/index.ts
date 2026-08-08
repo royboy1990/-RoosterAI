@@ -6,6 +6,7 @@ import { gscConnector } from "./gsc";
 import { githubConnector } from "./github";
 import { imapConnector } from "./imap";
 import { siteHealthConnector } from "./site-health";
+import { weatherConnector } from "./weather";
 
 /**
  * Connector registry. Contributors add one line here.
@@ -19,6 +20,7 @@ export const connectors: readonly Connector[] = [
   ga4Connector,
   gscConnector,
   siteHealthConnector,
+  weatherConnector,
 ];
 
 export function getConnector(id: string): Connector | undefined {

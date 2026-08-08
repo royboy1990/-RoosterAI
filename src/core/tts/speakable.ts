@@ -1,5 +1,7 @@
 import { daypartGreeting } from "./greeting";
 import { briefSignOff } from "./signoff";
+import type { WeatherSnapshot } from "../weather/types";
+import { weatherGreetingLine } from "../weather/sentence";
 
 /**
  * Strip dashboard brief markdown into speakable prose (no second LLM pass).
@@ -126,20 +128,25 @@ export function buildSpokenBrief(options: {
   operatorName: string;
   timezone: string;
   now: Date;
+  weather?: WeatherSnapshot;
 }): string {
   const greeting = daypartGreeting(
     options.now,
     options.timezone,
     options.operatorName,
   );
+  const weatherLine = options.weather
+    ? weatherGreetingLine(options.now, options.timezone, options.weather)
+    : "";
   const signOff = briefSignOff(
     options.now,
     options.timezone,
     options.operatorName,
   );
   const body = toSpeakableBrief(options.text);
+  const lead = weatherLine ? `${greeting} ${weatherLine}` : greeting;
   if (!body) {
-    return `${greeting} ${signOff}`;
+    return `${lead} ${signOff}`;
   }
-  return `${greeting} ${body} ${signOff}`;
+  return `${lead} ${body} ${signOff}`;
 }

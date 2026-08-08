@@ -214,3 +214,243 @@ body {
     animation: none;
   }
 }
+
+/* When sky is behind chrome, lift muted text off bright cloud peaks. */
+header[data-weather="1"] .site-header-brand {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+header[data-weather="1"] .site-header-meta,
+header[data-weather="1"] .site-header-nav {
+  color: color-mix(in srgb, var(--foreground) 82%, var(--muted));
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(0, 0, 0, 0.55);
+}
+
+header[data-weather="1"] .site-header-nav a:hover {
+  color: var(--foreground);
+}
+
+/* Header weather backdrop — low-contrast; keep nav/mono legible. */
+@keyframes header-weather-sun-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes header-weather-star-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes header-weather-parallax-a {
+  from {
+    background-position: 0 42%;
+  }
+  to {
+    background-position: -1000px 42%;
+  }
+}
+
+@keyframes header-weather-parallax-b {
+  from {
+    background-position: 200px 48%;
+  }
+  to {
+    background-position: -800px 48%;
+  }
+}
+
+@keyframes header-weather-parallax-c {
+  from {
+    background-position: 0 55%;
+  }
+  to {
+    background-position: -1579px 55%;
+  }
+}
+
+@keyframes header-weather-snow-fall {
+  0% {
+    transform: translateY(-20%) translateX(0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateY(140%) translateX(10px);
+    opacity: 0;
+  }
+}
+
+/* Soft Apple-like double pulse: brief primary blip, pause, quieter echo. */
+@keyframes header-weather-flash {
+  0%,
+  88%,
+  100% {
+    opacity: 0;
+  }
+  89% {
+    opacity: 0.16;
+  }
+  90.5% {
+    opacity: 0;
+  }
+  92% {
+    opacity: 0.1;
+  }
+  93.5% {
+    opacity: 0;
+  }
+}
+
+.header-weather-sun-rays {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 18deg,
+    rgba(240, 160, 48, 0.28) 18deg 28deg,
+    transparent 28deg 48deg,
+    rgba(240, 160, 48, 0.2) 48deg 56deg,
+    transparent 56deg 90deg,
+    rgba(240, 160, 48, 0.26) 90deg 100deg,
+    transparent 100deg 140deg,
+    rgba(240, 160, 48, 0.18) 140deg 150deg,
+    transparent 150deg 200deg,
+    rgba(240, 160, 48, 0.24) 200deg 212deg,
+    transparent 212deg 270deg,
+    rgba(240, 160, 48, 0.2) 270deg 282deg,
+    transparent 282deg 360deg
+  );
+  border-radius: 999px;
+  animation: header-weather-sun-spin 48s linear infinite;
+}
+
+.header-weather-star {
+  animation: header-weather-star-twinkle 5s ease-in-out infinite;
+}
+
+.header-weather-star-b {
+  animation-delay: 0.8s;
+  animation-duration: 6.2s;
+}
+
+.header-weather-star-c {
+  animation-delay: 1.4s;
+  animation-duration: 4.4s;
+}
+
+.header-weather-star-d {
+  animation-delay: 2.1s;
+  animation-duration: 7s;
+}
+
+.header-weather-star-e {
+  animation-delay: 0.4s;
+  animation-duration: 5.6s;
+}
+
+.header-weather-parallax-layer {
+  background-repeat: repeat-x;
+  /* Same idea as the gestok pen: natural aspect, not flattened to header height. */
+  background-size: auto 240%;
+  will-change: background-position;
+}
+
+.header-weather-parallax-a {
+  background-image: url("/weather/clouds_1.png");
+  background-position: 0 42%;
+  opacity: 0.92;
+  animation: header-weather-parallax-a 50s linear infinite;
+}
+
+.header-weather-parallax-b {
+  background-image: url("/weather/clouds_2.png");
+  background-position: 200px 48%;
+  opacity: 0.78;
+  animation: header-weather-parallax-b 38s linear infinite;
+}
+
+.header-weather-parallax-c {
+  background-image: url("/weather/clouds_3.png");
+  background-position: 0 55%;
+  opacity: 0.7;
+  animation: header-weather-parallax-c 65s linear infinite;
+}
+
+/* Condition mood on the existing data-condition root — filter the strips only. */
+.header-weather[data-condition="fog"] .header-weather-parallax {
+  filter: blur(1.5px) contrast(0.88) brightness(1.06);
+}
+
+.header-weather[data-condition="fog"] .header-weather-parallax-a {
+  opacity: 0.95;
+}
+
+.header-weather[data-condition="fog"] .header-weather-parallax-b {
+  opacity: 0.85;
+}
+
+.header-weather[data-condition="fog"] .header-weather-parallax-c {
+  opacity: 0.78;
+}
+
+.header-weather[data-condition="rain"] .header-weather-parallax {
+  filter: brightness(0.78) saturate(0.8) hue-rotate(8deg);
+}
+
+.header-weather[data-condition="storm"] .header-weather-parallax {
+  filter: brightness(0.62) saturate(0.7) contrast(1.1) hue-rotate(12deg);
+}
+
+.header-weather[data-condition="storm"] .header-weather-parallax-a {
+  opacity: 1;
+}
+
+.header-weather[data-condition="storm"] .header-weather-parallax-b {
+  opacity: 0.88;
+}
+
+.header-weather[data-condition="storm"] .header-weather-parallax-c {
+  opacity: 0.8;
+}
+
+.header-weather[data-condition="snow"] .header-weather-parallax {
+  filter: brightness(1.02) saturate(0.55) hue-rotate(-12deg);
+}
+
+.header-weather-snow {
+  animation: header-weather-snow-fall 5s linear infinite;
+}
+
+.header-weather-flash {
+  background:
+    radial-gradient(
+      ellipse 70% 90% at 62% 18%,
+      rgba(190, 210, 245, 0.55) 0%,
+      transparent 62%
+    ),
+    rgba(200, 214, 238, 0.22);
+  animation: header-weather-flash 8.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-weather-sun-rays,
+  .header-weather-star,
+  .header-weather-parallax-a,
+  .header-weather-parallax-b,
+  .header-weather-parallax-c,
+  .header-weather-snow,
+  .header-weather-flash {
+    animation: none;
+  }
+}
