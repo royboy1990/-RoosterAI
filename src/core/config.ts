@@ -62,6 +62,14 @@ const roosterConfigSchema = z.object({
   operatorName: z.string().max(OPERATOR_NAME_MAX).default(""),
   /** Per-connector AbortSignal.timeout budget in ms. */
   connectorTimeoutMs: z.number().int().positive().default(30_000),
+  /** Whole wake AbortSignal.timeout budget in ms. Covers 30s gather + 90s LLM + 60s TTS + 30s delivery plus overhead. */
+  runDeadlineMs: z.number().int().positive().default(240_000),
+  /** LLM stage AbortSignal.timeout budget in ms. */
+  llmTimeoutMs: z.number().int().positive().default(90_000),
+  /** TTS stage AbortSignal.timeout budget in ms. */
+  ttsTimeoutMs: z.number().int().positive().default(60_000),
+  /** Delivery stage AbortSignal.timeout budget in ms. */
+  deliveryTimeoutMs: z.number().int().positive().default(30_000),
   /** Max characters kept per connector after sanitize. */
   perConnectorCharBudget: z.number().int().positive().default(4_000),
   /** Sparse — installed connectors only. Empty is a valid intermediate state. */

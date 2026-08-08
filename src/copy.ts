@@ -246,6 +246,8 @@ export const copy = {
     successLink: "perch",
     successAfter: ".",
     failed: "Wake failed.",
+    alreadyRunning:
+      "A wake is already in progress — wait for it to finish.",
   },
   roosterFm: {
     label: "Rooster FM",

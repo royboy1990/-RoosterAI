@@ -178,13 +178,25 @@ async function gatherConnectors(
 }
 
 /**
- * Orchestration: gather → sanitize → summarize → deliver → persist.
+ * Orchestration: gather → sanitize → summarize → persist → deliver.
  * No demo / dry-run branches — behavior comes from config + registries.
  */
+let activeRun: Promise<BriefRecord> | null = null;
+
 export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
+  if (activeRun) {
+    throw new Error(copy.wake.alreadyRunning);
+  }
+  activeRun = runPipelineInner(loaded).finally(() => {
+    activeRun = null;
+  });
+  return activeRun;
+}
+
+async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
   const { config, rootDir, source } = loaded;
   const now = new Date();
-  const runAbort = new AbortController();
+  const runSignal = AbortSignal.timeout(config.runDeadlineMs);
 
   const log = (message: string): void => {
     console.log(message);
@@ -194,7 +206,7 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
   };
 
   const ctx: RunContext = {
-    signal: runAbort.signal,
+    signal: runSignal,
     timezone: config.timezone,
     now,
     log,
@@ -277,6 +289,13 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     const user = overview
       ? `${overview}\n\n---\n\n${digestBlock}`
       : digestBlock;
+    const llmCtx: RunContext = {
+      ...ctx,
+      signal: AbortSignal.any([
+        runSignal,
+        AbortSignal.timeout(config.llmTimeoutMs),
+      ]),
+    };
     try {
       text = await llm.complete(
         {
@@ -284,7 +303,7 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
           user,
           model: config.llm.model,
         },
-        ctx,
+        llmCtx,
       );
     } catch (err) {
       llmFailed = true;
@@ -298,18 +317,6 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     text = `${copy.demoMarker}\n${text}`;
   }
 
-  const delivery = getDeliveryChannel(config.delivery.channel);
-  if (!delivery) {
-    throw new Error(`Unknown delivery channel "${config.delivery.channel}"`);
-  }
-
-  const deliveryMissing = missingEnv(delivery.requiredEnv, loaded.env);
-  if (deliveryMissing.length > 0) {
-    throw new Error(
-      `Delivery channel "${delivery.id}" missing env: ${deliveryMissing.join(", ")}`,
-    );
-  }
-
   const brief: BriefRecord = {
     id: toBriefId(now),
     createdAt: now.toISOString(),
@@ -320,7 +327,9 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     digest,
     outcomes,
     llmProviderId: llm.id,
-    deliveryChannelId: delivery.id,
+    // Configured id, not the resolved channel — resolution happens after the
+    // first writeBrief so a bad channel still leaves a persisted brief.
+    deliveryChannelId: config.delivery.channel,
     llmFailed: llmFailed || undefined,
     llmError,
     wakeMode,
@@ -340,7 +349,10 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
         text: brief.text,
         prefs: audioPrefsFromConfig(config),
         now,
-        signal: ctx.signal,
+        signal: AbortSignal.any([
+          runSignal,
+          AbortSignal.timeout(config.ttsTimeoutMs),
+        ]),
         log,
       });
       brief.audioRelativePath = audio.audioRelativePath;
@@ -353,9 +365,35 @@ export async function runPipeline(loaded: LoadedConfig): Promise<BriefRecord> {
     }
   }
 
-  await delivery.deliver({ text, brief }, ctx);
   const filePath = await writeBrief(rootDir, brief);
   log(`Persisted brief → ${filePath} · Coop Status: ${brief.status}`);
+
+  const deliveryCtx: RunContext = {
+    ...ctx,
+    signal: AbortSignal.any([
+      runSignal,
+      AbortSignal.timeout(config.deliveryTimeoutMs),
+    ]),
+  };
+  try {
+    const delivery = getDeliveryChannel(config.delivery.channel);
+    if (!delivery) {
+      throw new Error(`Unknown delivery channel "${config.delivery.channel}"`);
+    }
+    const deliveryMissing = missingEnv(delivery.requiredEnv, loaded.env);
+    if (deliveryMissing.length > 0) {
+      throw new Error(
+        `Delivery channel "${delivery.id}" missing env: ${deliveryMissing.join(", ")}`,
+      );
+    }
+    await delivery.deliver({ text, brief }, deliveryCtx);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    brief.deliveryError = message;
+    await writeBrief(rootDir, brief);
+    log(`Delivery failed (brief kept): ${message}`);
+    throw err;
+  }
 
   return brief;
 }

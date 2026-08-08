@@ -2,6 +2,10 @@
   "demo": false,
   "timezone": "UTC",
   "connectorTimeoutMs": 30000,
+  "runDeadlineMs": 240000,
+  "llmTimeoutMs": 90000,
+  "ttsTimeoutMs": 60000,
+  "deliveryTimeoutMs": 30000,
   "perConnectorCharBudget": 4000,
   "connectors": [
     {
