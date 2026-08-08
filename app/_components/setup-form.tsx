@@ -75,7 +75,7 @@ export function SetupForm(props: SetupFormProps) {
                     name="connector"
                     value={connector.id}
                     defaultChecked={checked}
-                    className="mt-1"
+                    className="mt-1 accent-[var(--accent)]"
                   />
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="font-medium text-foreground">

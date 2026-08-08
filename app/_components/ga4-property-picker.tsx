@@ -227,7 +227,7 @@ export function Ga4PropertyPicker(props: Ga4PropertyPickerProps) {
                     <label className="flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm transition hover:bg-surface">
                       <input
                         type="checkbox"
-                        className="mt-1"
+                        className="mt-1 accent-[var(--accent)]"
                         checked={checked}
                         onChange={() => toggle(property.id)}
                         {...(props.embedded
