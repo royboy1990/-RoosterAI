@@ -59,7 +59,7 @@ Two separate objects:
 
 **Pecks** appear under the brief prose (heading **Pecks**, hint *Questions worth asking about this brief*). First click on a chip creates a chat; later clicks reopen that same Peck + source-brief thread. Free-form Ask always starts a new thread. Calm mornings may show fewer or zero chips (the section hides when empty). Demo / stub wakes use canned showcase pecks.
 
-**Ask** digs deeper than rephrasing the prose. Each thread freezes `contextBriefIds` (source brief + preceding substantive briefs, default up to 7) so later wakes do not silently change yesterday’s chat. Answers stay plain; the UI links source brief day(s) under each reply. History rows also open `/brief/[id]`.
+**Ask** digs deeper than rephrasing the prose. Each thread freezes `contextBriefIds` (source brief + preceding substantive briefs, default up to 7) and `contextWeeklyIds` (successful weeklies with `weekEnd` on/before the source day, default up to 4) so later wakes do not silently change yesterday’s chat. Answers stay plain; the UI links source brief and week pages under each reply via explicit citation markers (not substring ID matching). History rows also open `/brief/[id]`; weekly archive is `/weeks`.
 
 Ask requires a **real LLM** with credentials. Stub / demo-only modes show Pecks but **disable Ask** (no silent stub answers). You can also turn either feature off independently in `rooster.config.json`:
 
@@ -68,14 +68,36 @@ Ask requires a **real LLM** with credentials. Stub / demo-only modes show Pecks 
 | `pecksEnabled` | `true` | Skip pecks generation on wake when false |
 | `askEnabled` | `true` | Hide Ask entry when false |
 | `chatContextBriefs` | `7` (max 7) | Briefs frozen into a new chat |
+| `chatContextWeeks` | `4` (max 12) | Successful weeklies frozen into a new chat |
 | `pecksTimeoutMs` | `20000` | Fail-soft; wake continues on timeout |
 | `askTimeoutMs` | `60000` | Per Ask turn |
 | `askMaxUserMessageChars` | `4000` | Request limit |
 | `askMaxAssistantChars` | `8000` | Soft reply cap |
-| `askContextCharBudget` | `24000` | Evidence assembly budget |
+| `askContextCharBudget` | `24000` | Evidence budget (~45% source brief / ~35% weeklies / ~20% neighbors) |
 | `chatMaxStoredMessages` | `40` | Older turns pruned |
 
 TTS sign-offs are unchanged — pecks are never spoken.
+
+## Weekly memory
+
+One `WeeklyRecord` powers machine memory and the human page at `/week/[id]`. Structured `signals` + `carryForward` are canonical; `text` is **deterministically rendered** from them (never LLM prose alongside). Weeks are Monday–Sunday in `config.timezone` (ids like `2026-08-03` / `2026-08-03.demo`).
+
+Generation is a **lazy idempotent backfill** on wake: after the daily brief is persisted and delivery is attempted, the weekly stage runs fail-soft under one shared `weeklyTimeoutMs` budget (max **2** provider attempts per wake). Source evidence is in-week briefs by local `createdAt` — digest + outcomes only (unchanged wakes keep their own id/digest; no `resolveSubstantiveBrief`). Identical digests are grouped so multi-day persistence is visible to the model.
+
+| Knob | Default | Notes |
+|------|---------|--------|
+| `weeklyEnabled` | `true` | Gate generation |
+| `weeklyTimeoutMs` | `30000` | Entire weekly stage (all backfills) |
+| `weeklyRetryHours` | `24` | Cooldown after failed LLM/parse |
+| `weeklyRetentionWeeks` | `12` | Prune successful weeks per demo/real lane |
+
+Failed attempt records stay on disk for cooldown but are **hidden** from `/weeks`. Demo / stub wakes write a canned fixture without a live weekly JSON call.
+
+Offline checks for digest grouping, unchanged cross-week baseline, lease, retention, Ask markers, and budget split:
+
+```bash
+npx tsx scripts/verify-weekly.ts
+```
 
 ## Tier 0 — hatch a demo brief (no keys)
 
@@ -399,9 +421,12 @@ No API key. Install **Site health** from `/coop`, then in Settings list absolute
        │
        ▼
    Telegram / file ──> data/briefs/<timestamp>.json + phone
+       │
+       ▼
+   weekly backfill ──> data/weeks/<monday>.json (fail-soft; max 2 / wake)
 ```
 
-Ask threads live separately under `data/chats/` with frozen `contextBriefIds` — not rewritten when a new wake lands.
+Ask threads live separately under `data/chats/` with frozen `contextBriefIds` + `contextWeeklyIds` — not rewritten when a new wake lands.
 
 After gathering, Rooster compares today’s digest to the last usable brief — unchanged mornings skip the LLM; otherwise the model still writes a full morning brief (with a short memory packet when something moved). Handy if you Wake more than once a day: you still get a morning brief, not a rewrite of the same digest.
 
@@ -449,7 +474,7 @@ Local **Wake the Flock Up** / `npm run wake` do not need this token.
 - **Secret scan** → `npm run check:secrets` (also runs on PR/push via GitHub Actions) looks for known token shapes so keys do not land in the tree.
 - **Preferences** → `rooster.config.json` (gitignored; copy from `rooster.config.example.json`, or let `/coop` create it). Sparse `connectors[]` — installed only. Model, delivery, timezone, schedule hint, operator name, TTS prefs, and briefing prompts live on Settings.
 - **Timezone** → IANA string in config (e.g. `Asia/Jerusalem`). Used for the header clock, calendar “today”, GA4 day boundaries, and spoken daypart greetings. If still `UTC`, the dashboard adopts your browser zone once; Settings also has **Use browser timezone**.
-- **Local-only (never commit)** → `.env`, `rooster.config.json`, `data/` (briefs + chats + spoken MP3s), `*ga4-service-account.json`, plus IDE agent files `AGENTS.md` / `CLAUDE.md`.
+- **Local-only (never commit)** → `.env`, `rooster.config.json`, `data/` (briefs + chats + weeks + spoken MP3s), `*ga4-service-account.json`, plus IDE agent files `AGENTS.md` / `CLAUDE.md`.
 
 ## A note from the coop
 

@@ -11,6 +11,7 @@
     "wake": "tsx src/core/run.ts",
     "demo:showcase": "tsx scripts/seed-showcase-brief.ts",
     "check:secrets": "tsx scripts/check-secrets.ts",
+    "verify:weekly": "tsx scripts/verify-weekly.ts",
     "generate:wake-workflow": "tsx scripts/generate-wake-workflow.ts"
   },
   "dependencies": {

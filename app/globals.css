@@ -211,6 +211,28 @@ body {
   color: inherit;
 }
 
+/* Reusable hover tooltip (portaled from Tooltip). */
+@keyframes ui-tooltip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ui-tooltip-panel {
+  animation: ui-tooltip-in 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-tooltip-panel {
+    animation: none;
+  }
+}
+
 .metric-mono {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
@@ -495,4 +517,131 @@ header[data-weather="1"] .site-header-nav a:hover {
   .header-weather-flash {
     animation: none;
   }
+}
+
+/* ---------- /mascot demo stage ---------- */
+.mascot-stage {
+  background: radial-gradient(
+    120% 90% at 70% 0%,
+    #1b1a17 0%,
+    var(--background) 62%
+  );
+}
+
+.mascot-floor {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--border) 12%,
+    var(--border) 88%,
+    transparent
+  );
+}
+
+.mascot-rooster .pivot {
+  fill: #00e5ff;
+  stroke: #003;
+  stroke-width: 1.5;
+  opacity: 0;
+}
+
+.showpivots .mascot-rooster .pivot,
+.mascot-rooster.showpivots .pivot {
+  opacity: 1;
+}
+
+.mascot-grain {
+  position: absolute;
+  width: 7px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  opacity: 0.75;
+  transition:
+    opacity 0.18s,
+    transform 0.18s;
+}
+
+.mascot-grain.eaten {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.4);
+}
+
+.mascot-bubble {
+  position: absolute;
+  bottom: 230px;
+  left: 0;
+  z-index: 2;
+  max-width: 230px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--foreground);
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0;
+  transform: translateY(6px) scale(0.96);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1);
+  pointer-events: none;
+  white-space: normal;
+}
+
+.mascot-bubble.on {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.mascot-bubble:after {
+  content: "";
+  position: absolute;
+  left: 26px;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  background: var(--surface-raised);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+
+.mascot-bubble.accent {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.mascot-bubble.warn {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Fixed companion — fills the left gutter up to the centered FM dock. */
+.mascot-companion {
+  bottom: 80px;
+  left: 0.75rem;
+  /* Dock is w-[min(100%-1.5rem,42rem)] mx-auto; use that left gutter as the floor. */
+  width: max(
+    0px,
+    calc((100% - min(100% - 1.5rem, 42rem)) / 2 - 1.5rem)
+  );
+  /* Keep SVG transform updates from dirtying the whole page while scrolling. */
+  contain: layout style;
+  isolation: isolate;
+}
+
+.mascot-companion-world {
+  width: 100%;
+}
+
+.mascot-companion-world .mascot-bubble {
+  bottom: 118px;
+  max-width: 180px;
+  font-size: 11.5px;
+  padding: 8px 11px;
+}
+
+.mascot-companion-world .mascot-bubble:after {
+  left: 18px;
 }

@@ -270,6 +270,32 @@ export function conditionLabel(condition: WeatherCondition): string {
   }
 }
 
+/** Short adjective for header hover: "It's Cloudy in Tel Aviv". */
+export function conditionAdjective(
+  condition: WeatherCondition,
+  isDay: boolean,
+): string {
+  switch (condition) {
+    case "clear":
+      return isDay ? "Sunny" : "Clear";
+    case "cloudy":
+      return "Cloudy";
+    case "rain":
+      return "Rainy";
+    case "snow":
+      return "Snowy";
+    case "storm":
+      return "Stormy";
+    case "fog":
+      return "Foggy";
+  }
+}
+
+/** Header weather-icon hover / accessible label. */
+export function weatherHoverTitle(snapshot: WeatherSnapshot): string {
+  return `It's ${conditionAdjective(snapshot.condition, snapshot.isDay)} in ${snapshot.locationName}`;
+}
+
 /** Compact glyph for the header mono line (legacy text; prefer SVG chip). */
 export function conditionGlyph(
   condition: WeatherCondition,

@@ -17,10 +17,19 @@ import { copy } from "@/src/copy";
 
 type WakePhase = "idle" | "gather" | "llm";
 
+/** One-shot mascot cue — new id per finished Wake; do not key off sticky `result`. */
+export type WakeMascotEvent = {
+  id: string;
+  outcome: "success" | "failure";
+  message?: string;
+};
+
 interface WakeContextValue {
   isPending: boolean;
   phase: WakePhase;
   result: ActionResult | null;
+  /** Latest finished Wake attempt for the companion; null until first finish. */
+  mascotEvent: WakeMascotEvent | null;
   wake: (options?: { demo?: boolean }) => void;
 }
 
@@ -106,6 +115,7 @@ export function WakeProvider({
   const [isPending, startTransition] = useTransition();
   const [phase, setPhase] = useState<WakePhase>("idle");
   const [result, setResult] = useState<ActionResult | null>(null);
+  const [mascotEvent, setMascotEvent] = useState<WakeMascotEvent | null>(null);
 
   useEffect(() => {
     if (!isPending) {
@@ -124,6 +134,11 @@ export function WakeProvider({
     startTransition(async () => {
       const next = await wakeTheFlock({ demo: options.demo });
       setResult(next);
+      setMascotEvent({
+        id: crypto.randomUUID(),
+        outcome: next.ok ? "success" : "failure",
+        message: next.ok ? undefined : next.message,
+      });
       if (next.ok && crow) {
         crow.playWhenReady();
       }
@@ -131,13 +146,15 @@ export function WakeProvider({
   };
 
   return (
-    <WakeContext.Provider value={{ isPending, phase, result, wake }}>
+    <WakeContext.Provider
+      value={{ isPending, phase, result, mascotEvent, wake }}
+    >
       {children}
     </WakeContext.Provider>
   );
 }
 
-function useWake(): WakeContextValue {
+export function useWake(): WakeContextValue {
   const ctx = useContext(WakeContext);
   if (!ctx) {
     throw new Error("useWake must be used within WakeProvider");

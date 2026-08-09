@@ -15,6 +15,11 @@
   "askMaxAssistantChars": 8000,
   "askContextCharBudget": 24000,
   "chatMaxStoredMessages": 40,
+  "weeklyEnabled": true,
+  "weeklyTimeoutMs": 30000,
+  "weeklyRetryHours": 24,
+  "chatContextWeeks": 4,
+  "weeklyRetentionWeeks": 12,
   "perConnectorCharBudget": 4000,
   "connectors": [
     {

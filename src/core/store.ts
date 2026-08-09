@@ -27,10 +27,15 @@ function chatsDir(rootDir: string): string {
   return path.join(rootDir, "data", "chats");
 }
 
+function weeksDir(rootDir: string): string {
+  return path.join(rootDir, "data", "weeks");
+}
+
 export async function ensureDataDirs(rootDir: string): Promise<void> {
   await mkdir(briefsDir(rootDir), { recursive: true });
   await mkdir(audioDir(rootDir), { recursive: true });
   await mkdir(chatsDir(rootDir), { recursive: true });
+  await mkdir(weeksDir(rootDir), { recursive: true });
 }
 
 export async function writeBriefAudio(

@@ -157,12 +157,64 @@ export interface BriefRecord {
   usage?: BriefUsage;
 }
 
+/** Structured change or pattern claim grounded in in-week briefs. */
+export interface WeeklySignal {
+  key: string;
+  kind: "change" | "pattern";
+  scope?: string;
+  summary: string;
+  direction?: "improved" | "declined" | "mixed" | "unchanged";
+  evidenceBriefIds: string[];
+}
+
+/** Multi-day or late-week item still worth attention (no implied resolution). */
+export interface WeeklyCarryForward {
+  key: string;
+  scope?: string;
+  summary: string;
+  evidenceBriefIds: string[];
+}
+
+/**
+ * One Mon–Sun week of machine memory + human archive page.
+ * `text` is deterministically rendered from structured fields only.
+ */
+export interface WeeklyRecord {
+  /** Monday YMD, or `{ymd}.demo` for demo lane. */
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  timezone: string;
+  demo: boolean;
+  createdAt: string;
+  sourceBriefIds: string[];
+  signals: WeeklySignal[];
+  carryForward: WeeklyCarryForward[];
+  /** Rendered from signals + carryForward — never LLM prose. */
+  text: string;
+  /** Weekly LLM cost metadata when a provider was called. */
+  usage?: BriefUsage;
+  lastAttemptAt?: string;
+  /** Skip LLM until this ISO time after a failed attempt. */
+  retryAfter?: string;
+  generationError?: string;
+}
+
+export type EvidenceRefType = "brief" | "week";
+
+export interface EvidenceRef {
+  type: EvidenceRefType;
+  id: string;
+}
+
 export type ChatMessageRole = "user" | "assistant";
 
 export interface ChatMessage {
   role: ChatMessageRole;
   content: string;
-  /** Brief ids the assistant cited for this turn (assistant only). */
+  /** Provenance for this assistant turn (brief and/or week). */
+  sources?: EvidenceRef[];
+  /** @deprecated prefer sources; still read for old threads */
   sourceBriefIds?: string[];
 }
 
@@ -176,5 +228,7 @@ export interface ChatRecord {
   sourceBriefId?: string;
   /** Frozen at thread creation — never silently refreshed on later wakes. */
   contextBriefIds: string[];
+  /** Frozen successful weeklies at thread creation (optional for old chats). */
+  contextWeeklyIds?: string[];
   messages: ChatMessage[];
 }

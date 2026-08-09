@@ -4,26 +4,32 @@ import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 import { BriefProse } from "@/app/_components/brief-prose";
 import { copy } from "@/src/copy";
-import type { ChatMessage } from "@/src/core/types";
+import type { ChatMessage, EvidenceRef } from "@/src/core/types";
+import { resolveMessageSources } from "@/src/core/ask/evidence";
 
 function Provenance({
-  sourceBriefIds,
-  briefLabels,
+  sources,
+  labels,
 }: {
-  sourceBriefIds: string[];
-  briefLabels: Record<string, string>;
+  sources: EvidenceRef[];
+  labels: Record<string, string>;
 }) {
-  if (sourceBriefIds.length === 0) {
+  if (sources.length === 0) {
     return null;
   }
 
-  const parts = sourceBriefIds.map((id, index) => {
-    const label = briefLabels[id] ?? id;
+  const parts = sources.map((source, index) => {
+    const key = `${source.type}:${source.id}`;
+    const label = labels[key] ?? labels[source.id] ?? source.id;
+    const href =
+      source.type === "week"
+        ? `/week/${encodeURIComponent(source.id)}`
+        : `/brief/${encodeURIComponent(source.id)}`;
     return (
-      <span key={id}>
-        {index === 0 ? null : index === sourceBriefIds.length - 1 ? " and " : ", "}
+      <span key={key}>
+        {index === 0 ? null : index === sources.length - 1 ? " and " : ", "}
         <Link
-          href={`/brief/${encodeURIComponent(id)}`}
+          href={href}
           className="underline decoration-border underline-offset-2 hover:text-foreground"
         >
           {label}
@@ -42,12 +48,13 @@ function Provenance({
 export function AskThread({
   chatId,
   initialMessages,
-  briefLabels,
+  sourceLabels,
   askAvailable,
 }: {
   chatId: string;
   initialMessages: ChatMessage[];
-  briefLabels: Record<string, string>;
+  /** Keys are `brief:id` / `week:id`, with bare id fallback for legacy. */
+  sourceLabels: Record<string, string>;
   askAvailable: boolean;
 }) {
   const [messages, setMessages] = useState(initialMessages);
@@ -79,6 +86,7 @@ export function AskThread({
         const data = (await res.json()) as {
           ok?: boolean;
           reply?: string;
+          sources?: EvidenceRef[];
           sourceBriefIds?: string[];
           error?: string;
         };
@@ -86,12 +94,20 @@ export function AskThread({
           setError(data.error ?? copy.ask.failed);
           return;
         }
+        const sources =
+          data.sources && data.sources.length > 0
+            ? data.sources
+            : (data.sourceBriefIds ?? []).map((id) => ({
+                type: "brief" as const,
+                id,
+              }));
         setMessages((prev) => [
           ...prev,
           { role: "user", content: trimmed },
           {
             role: "assistant",
             content: data.reply!,
+            sources,
             sourceBriefIds: data.sourceBriefIds,
           },
         ]);
@@ -123,8 +139,8 @@ export function AskThread({
                 <>
                   <BriefProse text={message.content} />
                   <Provenance
-                    sourceBriefIds={message.sourceBriefIds ?? []}
-                    briefLabels={briefLabels}
+                    sources={resolveMessageSources(message)}
+                    labels={sourceLabels}
                   />
                 </>
               )}

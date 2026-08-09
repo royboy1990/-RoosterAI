@@ -1,5 +1,10 @@
 import { listBriefIds, readBrief } from "../store";
 import type { BriefRecord } from "../types";
+import {
+  localYmd,
+  monthStartYmd,
+  weekStartYmd,
+} from "../calendar-week";
 
 export interface BriefSpendSummary {
   weekUsd: number | null;
@@ -8,50 +13,6 @@ export interface BriefSpendSummary {
   monthBriefs: number;
   /** True when at least one brief in week/month has usage but no priced total. */
   hasUnknown: boolean;
-}
-
-/** YYYY-MM-DD in an IANA timezone. */
-function localYmd(date: Date, timezone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-}
-
-/** Monday=0 … Sunday=6 for the local calendar day of `date`. */
-function localMondayOffset(date: Date, timezone: string): number {
-  const weekday = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    weekday: "short",
-  }).format(date);
-  const map: Record<string, number> = {
-    Mon: 0,
-    Tue: 1,
-    Wed: 2,
-    Thu: 3,
-    Fri: 4,
-    Sat: 5,
-    Sun: 6,
-  };
-  return map[weekday] ?? 0;
-}
-
-function shiftYmd(ymd: string, deltaDays: number): string {
-  const [y, m, d] = ymd.split("-").map(Number);
-  const utc = new Date(Date.UTC(y!, m! - 1, d! + deltaDays, 12, 0, 0));
-  return utc.toISOString().slice(0, 10);
-}
-
-function monthStartYmd(ymd: string): string {
-  return `${ymd.slice(0, 7)}-01`;
-}
-
-function weekStartYmd(now: Date, timezone: string): string {
-  const today = localYmd(now, timezone);
-  const offset = localMondayOffset(now, timezone);
-  return shiftYmd(today, -offset);
 }
 
 function briefLocalYmd(brief: BriefRecord, timezone: string): string {

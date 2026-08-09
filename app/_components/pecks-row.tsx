@@ -79,7 +79,6 @@ export function PeckChips({
                 type="button"
                 disabled={!askAvailable || pending}
                 onClick={() => onPeck(peck)}
-                title={askAvailable ? peck : copy.ask.disabledStub}
                 className={`group flex h-full w-full items-start gap-2.5 rounded border border-border border-l-2 border-l-border bg-surface-raised/60 px-3 py-2 text-left text-sm leading-snug text-foreground transition duration-200 ease-out hover:-translate-y-px hover:border-accent/40 hover:border-l-accent hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 ${
                   isActive ? "border-accent/50 border-l-accent bg-accent/10" : ""
                 } ${isDimmed ? "opacity-40" : ""}`}

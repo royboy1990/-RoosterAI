@@ -9,6 +9,8 @@ import {
   WakeProvider,
   WakeResultBanner,
 } from "@/app/_components/wake-provider";
+import { MascotCompanion } from "@/app/_components/mascot/mascot-companion";
+import { MascotProvider } from "@/app/_components/mascot/mascot-provider";
 import { PreferencesSaveProvider } from "@/app/_components/preferences-save-context";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { readLatestBrief } from "@/src/core/store";
@@ -56,20 +58,24 @@ export default async function RootLayout({
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <RoosterFMProvider>
           <WakeProvider wakeSound={loaded.config.wakeSound}>
-            <PreferencesSaveProvider>
-              <AmbientCanvas />
-              <TimezoneBootstrap timezone={timezone} />
-              <SiteHeader
-                status={latest?.status ?? null}
-                timezone={timezone}
-                now={now}
-                weather={weather}
-              />
-              <WakeResultBanner />
-              <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-3xl flex-1 flex-col px-6 py-8 pb-28">
-                {children}
-              </div>
-              <RoosterFmDock />            </PreferencesSaveProvider>
+            <MascotProvider>
+              <PreferencesSaveProvider>
+                <AmbientCanvas />
+                <TimezoneBootstrap timezone={timezone} />
+                <SiteHeader
+                  status={latest?.status ?? null}
+                  timezone={timezone}
+                  now={now}
+                  weather={weather}
+                />
+                <WakeResultBanner />
+                <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-3xl flex-1 flex-col px-6 py-8 pb-28">
+                  {children}
+                </div>
+                <MascotCompanion />
+                <RoosterFmDock />
+              </PreferencesSaveProvider>
+            </MascotProvider>
           </WakeProvider>
         </RoosterFMProvider>
       </body>

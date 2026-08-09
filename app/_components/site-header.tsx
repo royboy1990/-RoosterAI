@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { copy } from "@/src/copy";
 import type { CoopStatus } from "@/src/core/types";
-import type { WeatherSnapshot } from "@/src/core/weather";
+import {
+  weatherHoverTitle,
+  type WeatherSnapshot,
+} from "@/src/core/weather";
 import {
   coopStatusClass,
   coopStatusLabel,
@@ -15,6 +18,7 @@ import {
   HeaderWeatherBackdrop,
   WeatherConditionIcon,
 } from "@/app/_components/header-weather";
+import { Tooltip } from "@/app/_components/tooltip";
 
 export function SiteHeader({
   status,
@@ -46,16 +50,16 @@ export function SiteHeader({
   }, []);
 
   const time = formatHeaderTime(clock, timezone);
-  const hasWeather = weather !== null && weather !== undefined;
+  const weatherTitle = weather ? weatherHoverTitle(weather) : null;
 
   return (
     <header
       className="relative sticky top-0 z-30 overflow-hidden border-b border-border"
-      data-weather={hasWeather ? "1" : "0"}
+      data-weather={weather ? "1" : "0"}
     >
       <HeaderWeatherBackdrop weather={weather ?? null} />
       {/* Scrim: keep sky visible top-right; darken under brand/nav for contrast. */}
-      {hasWeather ? (
+      {weather ? (
         <>
           <div
             className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface/45 via-surface/72 to-surface/94"
@@ -87,15 +91,27 @@ export function SiteHeader({
             </Link>
             <p className="site-header-meta metric-mono min-w-0 text-xs text-muted">
               [{time}]
-              {hasWeather ? (
+              {weather && weatherTitle ? (
                 <>
                   {" · "}
                   <span className="inline-flex items-center gap-1 align-middle">
-                    <WeatherConditionIcon
-                      condition={weather.condition}
-                      isDay={weather.isDay}
-                      tempC={weather.tempC}
-                    />
+                    <Tooltip
+                      content={weatherTitle}
+                      side="bottom"
+                      contentClassName="metric-mono"
+                    >
+                      <span
+                        className="inline-flex cursor-default"
+                        role="img"
+                        aria-label={weatherTitle}
+                      >
+                        <WeatherConditionIcon
+                          condition={weather.condition}
+                          isDay={weather.isDay}
+                          tempC={weather.tempC}
+                        />
+                      </span>
+                    </Tooltip>
                     <span>{weather.tempC}</span>
                   </span>
                 </>
@@ -115,6 +131,9 @@ export function SiteHeader({
             </Link>
             <Link href="/history" className="hover:text-foreground">
               {copy.nav.history}
+            </Link>
+            <Link href="/weeks" className="hover:text-foreground">
+              {copy.nav.weeks}
             </Link>
             <Link href="/ask" className="hover:text-foreground">
               {copy.nav.ask}

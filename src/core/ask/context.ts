@@ -1,5 +1,12 @@
 import { listBriefIds, readBrief, resolveSubstantiveBrief } from "../store";
-import type { BriefRecord } from "../types";
+import type { BriefRecord, WeeklyRecord } from "../types";
+import {
+  isArchiveVisibleWeek,
+  isSuccessfulWeek,
+  listWeekIds,
+  readWeek,
+} from "../week-store";
+import { localYmd } from "../calendar-week";
 
 /**
  * Build a frozen context window for a new Ask thread.
@@ -62,6 +69,51 @@ export async function buildContextBriefIds(input: {
   return ids;
 }
 
+/**
+ * Newest successful weeklies with weekEnd on/before the as-of local day,
+ * same demo lane. Failed/cooldown stubs are excluded.
+ */
+export async function buildContextWeeklyIds(input: {
+  rootDir: string;
+  demo: boolean;
+  timezone: string;
+  /** As-of instant — typically the source brief's createdAt. */
+  asOf: Date;
+  maxWeeks: number;
+}): Promise<string[]> {
+  const max = Math.max(0, Math.min(12, input.maxWeeks));
+  if (max === 0) {
+    return [];
+  }
+
+  const asOfYmd = localYmd(input.asOf, input.timezone);
+  const ids = await listWeekIds(input.rootDir);
+  const selected: WeeklyRecord[] = [];
+
+  for (const id of ids) {
+    const week = await readWeek(input.rootDir, id);
+    if (!week || week.demo !== input.demo) {
+      continue;
+    }
+    if (!isSuccessfulWeek(week) || !isArchiveVisibleWeek(week)) {
+      continue;
+    }
+    if (week.weekEnd > asOfYmd) {
+      continue;
+    }
+    selected.push(week);
+  }
+
+  selected.sort((a, b) => {
+    if (a.weekStart !== b.weekStart) {
+      return a.weekStart < b.weekStart ? 1 : -1;
+    }
+    return a.createdAt < b.createdAt ? 1 : -1;
+  });
+
+  return selected.slice(0, max).map((w) => w.id);
+}
+
 /** Load briefs for a frozen id list (order preserved; missing ids dropped). */
 export async function loadContextBriefs(
   rootDir: string,
@@ -75,4 +127,19 @@ export async function loadContextBriefs(
     }
   }
   return briefs;
+}
+
+/** Load weeklies for a frozen id list (order preserved; missing ids dropped). */
+export async function loadContextWeeks(
+  rootDir: string,
+  contextWeeklyIds: string[],
+): Promise<WeeklyRecord[]> {
+  const weeks: WeeklyRecord[] = [];
+  for (const id of contextWeeklyIds) {
+    const week = await readWeek(rootDir, id);
+    if (week) {
+      weeks.push(week);
+    }
+  }
+  return weeks;
 }

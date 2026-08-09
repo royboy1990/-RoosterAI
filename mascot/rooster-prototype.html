@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RoosterAI mascot — motion prototype</title>
+<style>
+  :root{
+    --background:#121212; --foreground:#e8e4dc; --muted:#8a857a;
+    --accent:#f0a030; --accent-dim:#c47e1a; --surface:#1c1c1c;
+    --surface-raised:#242424; --border:#2a2a2a; --danger:#d4644a; --ok:#6b9e6e;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; background:var(--background); color:var(--foreground);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header{padding:22px 28px 0}
+  h1{margin:0; font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  h1 b{color:var(--accent)}
+  .sub{margin:6px 0 0; font-size:13px; color:var(--muted); max-width:70ch; line-height:1.5}
+
+  /* ---------- stage ---------- */
+  #stage{
+    position:relative; flex:1; min-height:300px; margin:20px 28px 0;
+    border:1px solid var(--border); border-radius:14px; overflow:hidden;
+    background:
+      radial-gradient(120% 90% at 70% 0%, #1b1a17 0%, var(--background) 62%);
+  }
+  #floor{
+    position:absolute; left:0; right:0; bottom:64px; height:1px;
+    background:linear-gradient(90deg,transparent,var(--border) 12%,var(--border) 88%,transparent);
+  }
+  #grains{position:absolute; left:0; right:0; bottom:0; height:100%; pointer-events:none}
+  .grain{
+    position:absolute; width:7px; height:5px; border-radius:50%;
+    background:var(--accent-dim); opacity:.75; transition:opacity .18s, transform .18s;
+  }
+  .grain.eaten{opacity:0; transform:translateY(-10px) scale(.4)}
+
+  #rooster{
+    position:absolute; bottom:47px; left:0; width:210px;
+    transform-origin:50% 100%; will-change:transform;
+  }
+  #rooster svg{display:block; width:100%; height:auto; overflow:visible}
+
+  #bubble{
+    position:absolute; bottom:212px; left:0; max-width:230px;
+    padding:9px 13px; border-radius:12px; border:1px solid var(--border);
+    background:var(--surface-raised); color:var(--foreground);
+    font-size:12.5px; line-height:1.45; opacity:0; transform:translateY(6px) scale(.96);
+    transition:opacity .22s ease, transform .22s cubic-bezier(.2,1.4,.4,1);
+    pointer-events:none; white-space:normal;
+  }
+  #bubble.on{opacity:1; transform:translateY(0) scale(1)}
+  #bubble:after{
+    content:""; position:absolute; left:26px; bottom:-7px; width:12px; height:12px;
+    background:var(--surface-raised); border-right:1px solid var(--border);
+    border-bottom:1px solid var(--border); transform:rotate(45deg);
+  }
+  #bubble.accent{border-color:var(--accent-dim); color:var(--accent)}
+  #bubble.warn{border-color:var(--danger); color:var(--danger)}
+
+  .pivot{fill:#00e5ff; stroke:#003; stroke-width:1.5; opacity:0}
+  .showpivots .pivot{opacity:1}
+
+  #hud{
+    position:absolute; top:12px; left:14px; font-size:11px; color:var(--muted);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.05em;
+  }
+  #hud b{color:var(--accent); font-weight:600}
+
+  /* ---------- controls ---------- */
+  #panel{padding:18px 28px 26px; display:flex; flex-wrap:wrap; gap:22px}
+  .col{display:flex; flex-direction:column; gap:9px}
+  .lbl{font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted)}
+  .row{display:flex; flex-wrap:wrap; gap:7px; max-width:640px}
+  button{
+    font:inherit; font-size:12.5px; padding:7px 12px; border-radius:8px; cursor:pointer;
+    background:var(--surface); color:var(--foreground); border:1px solid var(--border);
+    transition:border-color .15s, background .15s, color .15s;
+  }
+  button:hover{border-color:var(--muted)}
+  button.p{border-color:var(--accent-dim); color:var(--accent)}
+  button.p:hover{background:var(--accent); color:#17110d; border-color:var(--accent)}
+  label.tog{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); cursor:pointer}
+  input[type=checkbox]{accent-color:var(--accent); width:15px; height:15px}
+  input[type=range]{accent-color:var(--accent); width:120px}
+  .note{font-size:11.5px; color:var(--muted); max-width:34ch; line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><b>RoosterAI</b> &nbsp;·&nbsp; mascot motion prototype</h1>
+  <p class="sub">Same rig you'll import into Rive — every part below is a named group with a fixed pivot. This runs the seven states procedurally so you can judge the <em>feel</em> before spending a day animating. Leave it running: he's meant to be mostly quiet.</p>
+</header>
+
+<div id="stage">
+  <div id="hud">state <b id="hudState">idle</b> · quiet <b id="hudQuiet">on</b></div>
+  <div id="floor"></div>
+  <div id="grains"></div>
+  <div id="bubble"></div>
+
+  <div id="rooster">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 400">
+  <g id="Rooster" fill="none" stroke="#17110D" stroke-width="8" stroke-linejoin="round" stroke-linecap="round">
+
+    <g id="tail">
+      <path id="tail_c" fill="#2C8496" d="M136 254 C106 250 78 242 52 228 C34 218 48 190 66 200 C90 214 118 228 172 240 Z"/>
+      <path id="tail_b" fill="#1B5C6B" d="M140 228 C114 212 86 190 64 164 C51 148 78 124 92 140 C114 166 142 190 180 210 Z"/>
+      <path id="tail_a" fill="#3E9FB0" d="M150 198 C134 174 116 146 104 112 C96 92 132 82 140 102 C152 136 170 164 194 186 Z"/>
+    </g>
+
+    <g id="leg_back">
+      <path id="leg_back_shank" fill="#C98A25" d="M158 264 L184 264 L180 344 L162 344 Z"/>
+      <path id="leg_back_foot" fill="#C98A25" d="M157 340 L185 340 L201 350 C207 354 205 358 199 358 L141 358 C134 358 133 351 138 347 Z"/>
+      <path id="leg_back_toe" stroke-width="5" d="M176 344 C180 349 185 353 192 355"/>
+    </g>
+
+    <g id="neck">
+      <path id="neck_shape" fill="#D96A28" d="M218 200 C206 168 216 134 244 114 C256 106 278 110 286 124 C296 144 294 172 292 192 C288 202 278 206 268 208 Z"/>
+    </g>
+
+    <g id="body">
+      <path id="body_shape" fill="#E07B2C" d="M250 174 C276 198 276 242 254 268 C232 294 176 296 142 280 C106 263 92 224 106 194 C122 160 172 146 208 152 C228 155 242 164 250 174 Z"/>
+    </g>
+
+    <g id="wing">
+      <path id="wing_shape" fill="#C25A1E" d="M248 200 C258 228 246 258 220 272 C202 281 180 282 162 277 L142 284 C146 268 144 250 152 236 C172 208 220 186 248 200 Z"/>
+      <path id="wing_line_1" stroke-width="6" d="M236 216 C218 234 192 246 164 250"/>
+      <path id="wing_line_2" stroke-width="6" d="M242 242 C228 258 206 268 182 272"/>
+    </g>
+
+    <g id="leg_front">
+      <path id="leg_front_shank" fill="#F7C948" d="M210 270 L236 270 L232 350 L214 350 Z"/>
+      <path id="leg_front_foot" fill="#F7C948" d="M209 346 L237 346 L253 356 C259 360 257 364 251 364 L193 364 C186 364 185 357 190 353 Z"/>
+      <path id="leg_front_toe" stroke-width="5" d="M228 350 C232 355 237 359 244 361"/>
+    </g>
+
+    <g id="head_rig">
+      <g id="wattle">
+        <path id="wattle_shape" fill="#E34A35" d="M284 136 C270 160 270 194 290 202 C308 209 322 194 320 174 C318 156 306 142 296 134 Z"/>
+      </g>
+      <g id="comb">
+        <path id="comb_shape" fill="#E34A35" d="M252 74 C244 46 262 24 280 42 C288 14 314 16 316 44 C328 26 350 34 344 60 C340 74 326 84 310 86 C286 90 260 84 252 74 Z"/>
+      </g>
+      <g id="head">
+        <path id="head_shape" fill="#E8873A" d="M244 116 C244 82 268 56 302 56 C334 56 356 80 356 110 C356 134 344 152 324 162 C300 173 262 166 250 146 C245 138 244 127 244 116 Z"/>
+      </g>
+      <g id="beak_lower">
+        <path id="beak_lower_shape" fill="#D9A32E" d="M348 118 C366 123 384 119 394 113 C386 128 366 136 350 131 Z"/>
+      </g>
+      <g id="beak_upper">
+        <path id="beak_upper_shape" fill="#F7C948" d="M346 90 C372 90 392 99 400 107 C390 115 366 121 348 117 Z"/>
+      </g>
+      <g id="eye">
+        <ellipse id="eye_white" cx="306" cy="104" rx="18" ry="19" fill="#FBF6EA"/>
+        <circle id="eye_pupil" cx="312" cy="105" r="9.5" fill="#17110D" stroke="none"/>
+        <circle id="eye_shine" cx="307" cy="99" r="3.5" fill="#FBF6EA" stroke="none"/>
+        <ellipse id="eye_lid" cx="306" cy="104" rx="19" ry="20" fill="#E8873A" stroke="none"
+                 transform="translate(306 84) scale(1 0) translate(-306 -84)"/>
+        <path id="eye_closed" stroke="#17110D" stroke-width="6" fill="none" opacity="0" d="M292 104 C300 112 314 112 322 104"/>
+      </g>
+      <g id="brow">
+        <path id="brow_shape" fill="#17110D" stroke="none" d="M287 80 C295 69 316 67 327 73 C330 77 327 82 323 81 C313 76 299 77 291 84 C288 87 285 84 287 80 Z"/>
+      </g>
+    </g>
+
+    <g id="pivotdots" stroke="none">
+      <circle class="pivot" cx="256" cy="150" r="5"/>
+      <circle class="pivot" cx="238" cy="206" r="5"/>
+      <circle class="pivot" cx="185" cy="230" r="5"/>
+      <circle class="pivot" cx="240" cy="206" r="5"/>
+      <circle class="pivot" cx="170" cy="218" r="5"/>
+      <circle class="pivot" cx="222" cy="278" r="5"/>
+      <circle class="pivot" cx="172" cy="272" r="5"/>
+      <circle class="pivot" cx="348" cy="116" r="5"/>
+      <circle class="pivot" cx="306" cy="88"  r="5"/>
+    </g>
+  </g>
+</svg>
+  </div>
+</div>
+
+<div id="panel">
+  <div class="col">
+    <span class="lbl">States (the 7 you'll build in Rive)</span>
+    <div class="row" id="stateRow"></div>
+  </div>
+  <div class="col">
+    <span class="lbl">RoosterAI events</span>
+    <div class="row" id="eventRow"></div>
+  </div>
+  <div class="col">
+    <span class="lbl">Rig</span>
+    <label class="tog"><input type="checkbox" id="quiet" checked> quiet mode</label>
+    <label class="tog"><input type="checkbox" id="pivots"> show bone pivots</label>
+    <label class="tog">speed <input type="range" id="speed" min="0.3" max="2" step="0.1" value="1"></label>
+    <p class="note">Quiet mode = long idle gaps, rare ambient actions. Turn it off to see him fidget more than he should.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ------------------------------------------------------------------ *
+ *  RIG — one entry per animatable group. ox/oy is the bone pivot,
+ *  identical to the values documented in rooster.svg.
+ * ------------------------------------------------------------------ */
+const RIG = {
+  head : {id:'head_rig',   ox:256, oy:150},
+  neck : {id:'neck',       ox:238, oy:206},
+  body : {id:'body',       ox:185, oy:230},
+  wing : {id:'wing',       ox:240, oy:206},
+  tail : {id:'tail',       ox:170, oy:218},
+  legF : {id:'leg_front',  ox:222, oy:278},
+  legB : {id:'leg_back',   ox:172, oy:272},
+  jaw  : {id:'beak_lower', ox:348, oy:116},
+  brow : {id:'brow',       ox:306, oy:88 },
+  root : {id:'Rooster',    ox:210, oy:366}
+};
+for (const k in RIG) RIG[k].el = document.getElementById(RIG[k].id);
+
+const lidEl    = document.getElementById('eye_lid');
+const closedEl = document.getElementById('eye_closed');
+const pupilEl  = document.getElementById('eye_pupil');
+const shineEl  = document.getElementById('eye_shine');
+const roosterEl= document.getElementById('rooster');
+const stageEl  = document.getElementById('stage');
+const bubbleEl = document.getElementById('bubble');
+const grainsEl = document.getElementById('grains');
+
+/* ------------------------------------------------------------------ *
+ *  CHANNELS — every number the state machine can drive.
+ * ------------------------------------------------------------------ */
+const CH = ['headR','headX','headY','neckR','bodyY','bodySY','wingR','tailR',
+            'legFR','legBR','jawR','browR','browY','pupilX','pupilY','rootY','rootR','lid'];
+const zero = () => CH.reduce((o,k)=>(o[k]= k==='bodySY'?1:0, o),{});
+
+function apply(c){
+  set('head', c.headX, c.headY, c.headR);
+  set('neck', 0,0, c.neckR);
+  set('body', 0, c.bodyY, 0, 1, c.bodySY);
+  set('wing', 0,0, c.wingR);
+  set('tail', 0,0, c.tailR);
+  set('legF', 0,0, c.legFR);
+  set('legB', 0,0, c.legBR);
+  set('jaw',  0,0, c.jawR);
+  set('brow', 0, c.browY, c.browR);
+  set('root', 0, c.rootY, c.rootR);
+
+  const L = Math.max(0, Math.min(1, c.lid));
+  lidEl.setAttribute('transform', `translate(306 84) scale(1 ${L.toFixed(3)}) translate(-306 -84)`);
+  closedEl.setAttribute('opacity', L > .92 ? ((L-.92)/.08).toFixed(2) : 0);
+  const px = c.pupilX, py = c.pupilY;
+  pupilEl.setAttribute('transform', `translate(${px} ${py})`);
+  shineEl.setAttribute('transform', `translate(${px} ${py})`);
+}
+function set(name,x,y,r,sx,sy){
+  const p = RIG[name];
+  sx = sx===undefined?1:sx; sy = sy===undefined?1:sy;
+  p.el.setAttribute('transform',
+    `translate(${(p.ox+x).toFixed(2)} ${(p.oy+y).toFixed(2)}) rotate(${r.toFixed(2)}) `+
+    `scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(${-p.ox} ${-p.oy})`);
+}
+
+/* ------------------------------------------------------------------ *
+ *  STATES.  Each returns channel deltas for local time t (seconds).
+ *  `dur` = null means it loops forever until something else interrupts.
+ * ------------------------------------------------------------------ */
+const TAU = Math.PI*2;
+const clamp01 = v => v<0?0:v>1?1:v;
+const ease    = v => v*v*(3-2*v);            // smoothstep
+const env     = (t,d,a,r) => Math.min(ease(clamp01(t/a)), ease(clamp01((d-t)/r)));
+
+const STATES = {
+
+  idle: {dur:null, fn(t,c){
+    const s = TAU*t/3.6;
+    c.bodySY = 1 + 0.020*Math.sin(s);
+    c.bodyY  = -1.2*Math.sin(s);
+    c.headY  = 1.6*Math.sin(s + 0.5);
+    c.headR  = 1.1*Math.sin(s + 0.9);
+    c.neckR  = -0.8*Math.sin(s + 0.5);
+    c.tailR  = 2.6*Math.sin(TAU*t/5.1);
+    c.wingR  = 1.4*Math.sin(s + 0.3);
+  }},
+
+  /* Chicken walk: the head holds still in world space while the body
+     travels under it, then snaps forward. That head-lock is the whole gag. */
+  walk: {dur:null, fn(t,c){
+    const p = (t/0.62) % 1, s = TAU*p;
+    c.legFR = 27*Math.sin(s);
+    c.legBR = 27*Math.sin(s + Math.PI);
+    c.rootY = -3.2*Math.abs(Math.sin(s)) + 1.4;
+    c.bodyY = -1.0*Math.sin(2*s);
+    const thrust = Math.pow(clamp01((p*2)%1), 0.35);   // sawtooth-ish snap
+    c.headX = -5 + 10*thrust;
+    c.headY = -c.rootY*0.85;
+    c.neckR = -4*Math.sin(s);
+    c.headR = 2.5*Math.sin(s + 1.2);
+    c.tailR = 4.5*Math.sin(s);
+    c.wingR = 3.2*Math.sin(s + Math.PI);
+  }},
+
+  peck: {dur:1.35, fn(t,c){
+    const u = (t/0.675) % 1;
+    const d = Math.pow(Math.sin(u*Math.PI), 0.65);
+    c.neckR = 46*d; c.headR = 42*d; c.headY = 36*d; c.headX = -20*d;
+    c.jawR  = 16*d * (u<0.55?1:0.2);
+    c.rootR = 12*d; c.tailR = -14*d; c.bodyY = 4*d;
+    c.legFR = -8*d; c.legBR = 8*d;
+  }},
+
+  happy: {dur:1.5, fn(t,c){
+    const u = (t/0.75) % 1;
+    const hop = Math.sin(u*Math.PI);
+    c.rootY = -36*hop;
+    c.legFR = -20*hop; c.legBR = -20*hop;
+    c.wingR = -38*hop; c.tailR = 14*hop;
+    c.headR = -9*hop;  c.headY = -3*hop;
+    c.browR = -13*hop; c.browY = -2.5*hop;
+    c.jawR  = 15*hop;
+    c.bodySY = 1 + 0.05*Math.sin(u*TAU);
+    c.pupilY = -1.5*hop;
+  }},
+
+  curious: {dur:2.6, fn(t,c){
+    const e = env(t, 2.6, 0.30, 0.45);
+    c.headR = 17*e; c.headY = -2*e; c.headX = 3*e;
+    c.neckR = -6*e;
+    c.browR = -15*e; c.browY = -3*e;
+    c.pupilX = 2.2*e; c.pupilY = -1*e;
+    c.tailR = -5*e;
+    const s = TAU*t/3.2;                 // keep breathing underneath
+    c.bodySY = 1 + 0.016*Math.sin(s);
+  }},
+
+  sleep: {dur:null, fn(t,c){
+    const s = TAU*t/4.2;
+    c.lid = 1;
+    c.neckR = 21; c.headR = 13; c.headY = 13; c.headX = -9;
+    c.tailR = -4; c.wingR = 2;
+    c.bodySY = 1 + 0.032*Math.sin(s);
+    c.bodyY  = -2.0*Math.sin(s);
+    c.rootY  = 1.6*Math.sin(s);
+    c.browR  = 6; c.browY = 3;
+  }},
+
+  alert: {dur:1.7, fn(t,c){
+    const e = env(t, 1.7, 0.10, 0.75);          // fast attack, slow release
+    const j = Math.exp(-t*11)*Math.sin(t*46);   // little startle shake
+    c.neckR = -15*e + 3*j;
+    c.headR = -13*e + 4*j;
+    c.headY = -9*e; c.headX = 4*e;
+    c.browR = -19*e; c.browY = -4.5*e;
+    c.tailR = 17*e; c.wingR = -9*e;
+    c.rootY = -3*e; c.pupilY = -2*e;
+  }},
+
+  crow: {dur:2.0, fn(t,c){
+    const wind = ease(clamp01(t/0.30));
+    const rel  = Math.pow(clamp01((t-0.30)/0.30), .6) * ease(clamp01((2.0-t)/0.7));
+    c.neckR = -20*wind + 30*rel;
+    c.headR = -24*wind + 34*rel;
+    c.headX = -7*wind  + 16*rel;
+    c.headY = -6*wind  + 4*rel;
+    c.jawR  = 10*wind  + 22*rel;
+    c.browR = -16*(wind+rel)*0.7;
+    c.wingR = -26*Math.sin(clamp01(t/2.0)*Math.PI);
+    c.tailR = 18*wind + 8*rel;
+    c.rootY = -7*Math.sin(clamp01(t/2.0)*Math.PI);
+    c.bodySY = 1 + 0.04*rel;
+  }},
+
+  skeptic: {dur:2.4, fn(t,c){
+    const e = env(t, 2.4, 0.22, 0.5);
+    const shake = Math.sin(t*7.5)*Math.exp(-t*1.2);
+    c.headR = 12*e + 4*shake;
+    c.headX = -4*e; c.neckR = 5*e;
+    c.browR = 17*e; c.browY = 2.5*e;       // brow DOWN = unimpressed
+    c.lid   = 0.34*e;
+    c.tailR = -8*e; c.wingR = 4*e;
+    c.pupilX = -1.5*e;
+  }}
+};
+
+/* ------------------------------------------------------------------ *
+ *  PLAYER — crossfades between states so nothing pops.
+ * ------------------------------------------------------------------ */
+let cur = 'idle', curT = 0, prevSnap = null, blendT = 0, BLEND = 0.22;
+let queue = [];
+
+function play(name, opts){
+  opts = opts || {};
+  if (STATES[name]){
+    prevSnap = lastPose;                      // snapshot for the crossfade
+    blendT = 0;
+    cur = name; curT = 0;
+  }
+  if (opts.say) say(opts.say, opts.tone);
+  document.getElementById('hudState').textContent = name;
+}
+function enqueue(list){ queue = list.slice(); nextInQueue(); }
+function nextInQueue(){ if(queue.length) play(queue.shift()); }
+
+let lastPose = zero();
+
+function evaluate(dt){
+  const st = STATES[cur];
+  curT += dt;
+  if (st.dur !== null && curT >= st.dur){
+    if (queue.length) nextInQueue(); else play(idleOrWalk());
+    return evaluate(0);
+  }
+  const c = zero();
+  st.fn(curT, c);
+
+  // blink lives on top of everything except sleep
+  if (cur !== 'sleep') c.lid = Math.max(c.lid, blinkValue());
+
+  if (prevSnap && blendT < BLEND){
+    blendT += dt;
+    const k = ease(clamp01(blendT/BLEND));
+    for (const key of CH) c[key] = prevSnap[key] + (c[key]-prevSnap[key])*k;
+  } else prevSnap = null;
+
+  lastPose = c;
+  return c;
+}
+
+/* blink ------------------------------------------------------------ */
+let nextBlink = 2.5, blinkAt = -9, clock = 0;
+function blinkValue(){
+  if (clock > nextBlink){ blinkAt = clock; nextBlink = clock + 2.6 + Math.random()*5.5; }
+  const b = clock - blinkAt;
+  if (b < 0 || b > 0.19) return 0;
+  return Math.sin((b/0.19)*Math.PI);
+}
+
+/* ------------------------------------------------------------------ *
+ *  LOCOMOTION — DOM-space walking. Rive handles the legs, the page
+ *  handles the coordinates. Exactly how you'd ship it.
+ * ------------------------------------------------------------------ */
+let x = 60, dir = 1, target = null, SPEED = 62;
+function idleOrWalk(){ return target !== null ? 'walk' : 'idle'; }
+
+function locomote(dt){
+  if (target === null) return;
+  const d = target - x;
+  if (Math.abs(d) < 3){ target = null; if(cur==='walk') play('idle'); return; }
+  dir = d > 0 ? 1 : -1;
+  x += dir * SPEED * dt;
+  if (cur !== 'walk' && STATES[cur].dur === null) play('walk');
+}
+function placeRooster(){
+  roosterEl.style.transform = `translateX(${x.toFixed(1)}px) scaleX(${dir})`;
+  bubbleEl.style.left = Math.max(8, Math.min(x + (dir>0?70:20), stageEl.clientWidth-240)) + 'px';
+}
+
+/* ------------------------------------------------------------------ *
+ *  GRAIN — something to peck at. Small thing, big charm payoff.
+ * ------------------------------------------------------------------ */
+let grains = [];
+function seedGrains(){
+  grainsEl.innerHTML = ''; grains = [];
+  const w = stageEl.clientWidth;
+  for (let i=0;i<5;i++){
+    const g = document.createElement('div');
+    g.className = 'grain';
+    const gx = 70 + Math.random()*(w-180);
+    g.style.left = gx+'px'; g.style.bottom = (52 + Math.random()*8)+'px';
+    grainsEl.appendChild(g); grains.push({el:g, x:gx, gone:false});
+  }
+}
+function nearestGrain(){
+  let best=null, bd=1e9;
+  for (const g of grains){ if(g.gone) continue;
+    const d = Math.abs((x+105) - g.x); if(d<bd){bd=d; best=g;} }
+  return bd < 460 ? best : null;
+}
+function eatGrain(g){
+  if(!g||g.gone) return; g.gone = true; g.el.classList.add('eaten');
+  setTimeout(()=>{ const w=stageEl.clientWidth;
+    g.x = 70 + Math.random()*(w-180); g.el.style.left = g.x+'px';
+    g.el.classList.remove('eaten'); g.gone=false; }, 9000 + Math.random()*9000);
+}
+
+/* ------------------------------------------------------------------ *
+ *  SPEECH — one line, then gone. Never a chat window.
+ * ------------------------------------------------------------------ */
+let sayTimer = null;
+function say(text, tone){
+  bubbleEl.textContent = text;
+  bubbleEl.className = 'on' + (tone ? ' '+tone : '');
+  clearTimeout(sayTimer);
+  sayTimer = setTimeout(()=>{ bubbleEl.className = tone?tone:''; }, 3400);
+}
+
+/* ------------------------------------------------------------------ *
+ *  DIRECTOR — the part that decides he should mostly shut up.
+ * ------------------------------------------------------------------ */
+let quiet = true, nextAmbient = 6;
+function director(){
+  if (clock < nextAmbient) return;
+  const gap = quiet ? 9 + Math.random()*13 : 3.5 + Math.random()*4;
+  nextAmbient = clock + gap;
+  if (STATES[cur].dur !== null || cur === 'walk' || target !== null) return;
+
+  const g = nearestGrain();
+  const roll = Math.random();
+
+  if (g && roll < 0.42){                       // go eat something
+    target = g.x - 105;
+    setTimeout(()=>{ if(target===null){ play('peck'); eatGrain(g); } }, 900);
+  } else if (roll < 0.60){
+    play('peck');
+  } else if (roll < 0.74){
+    play('curious');
+  } else if (roll < 0.88){
+    target = 40 + Math.random()*(stageEl.clientWidth - 260);
+  }
+  // remaining ~12%: do nothing at all. That is a feature.
+}
+
+/* idle long enough with nothing happening -> doze off */
+let lastEvent = 0;
+function drowsy(){
+  if (!quiet) return;
+  if (clock - lastEvent > 46 && cur === 'idle' && target === null) play('sleep');
+}
+
+/* ------------------------------------------------------------------ *
+ *  EVENT MAP — the actual RoosterAI hookup.
+ * ------------------------------------------------------------------ */
+const EVENTS = {
+  'New brief'       : {seq:['alert'],            say:'Fresh brief is up.',            tone:'accent'},
+  'Strong brief'    : {seq:['crow','happy'],     say:'Good haul this morning.',       tone:'accent'},
+  'Weak brief'      : {seq:['skeptic'],          say:'Thin one today. Two sources went quiet.', tone:'warn'},
+  'Wake the flock'  : {seq:['crow'],             say:'COCK-A-DOODLE-DEPLOY',          tone:'accent'},
+  'Rain today'      : {seq:['curious'],          say:'Rain at 14:00. Bring the coat.'},
+  'Task went stale' : {seq:['skeptic','curious'],say:'That task has sat 3 days.',     tone:'warn'},
+  'Connector down'  : {seq:['alert','skeptic'],  say:'GA4 connector stopped answering.', tone:'warn'}
+};
+function fire(name){
+  const e = EVENTS[name];
+  lastEvent = clock; nextAmbient = clock + 5;
+  target = null;
+  enqueue(e.seq);
+  say(e.say, e.tone);
+}
+
+/* ------------------------------------------------------------------ *
+ *  MAIN LOOP
+ * ------------------------------------------------------------------ */
+let last = performance.now(), rate = 1;
+function frame(now){
+  let dt = Math.min((now - last)/1000, 0.05) * rate;
+  last = now; clock += dt;
+  locomote(dt);
+  director();
+  drowsy();
+  apply(evaluate(dt));
+  placeRooster();
+  requestAnimationFrame(frame);
+}
+
+/* ------------------------------------------------------------------ *
+ *  UI
+ * ------------------------------------------------------------------ */
+['idle','walk','peck','happy','curious','sleep','alert','crow','skeptic'].forEach(n=>{
+  const b = document.createElement('button');
+  b.textContent = n; b.className = 'p';
+  b.onclick = ()=>{ lastEvent = clock; target = null; queue=[];
+    if(n==='walk'){ target = x + (dir>0? 240 : -240); play('walk'); } else play(n); };
+  document.getElementById('stateRow').appendChild(b);
+});
+Object.keys(EVENTS).forEach(n=>{
+  const b = document.createElement('button');
+  b.textContent = n;
+  b.onclick = ()=>fire(n);
+  document.getElementById('eventRow').appendChild(b);
+});
+document.getElementById('quiet').onchange = e=>{
+  quiet = e.target.checked;
+  document.getElementById('hudQuiet').textContent = quiet?'on':'off';
+};
+document.getElementById('pivots').onchange = e=>
+  document.getElementById('rooster').classList.toggle('showpivots', e.target.checked);
+document.getElementById('speed').oninput = e=> rate = parseFloat(e.target.value);
+
+stageEl.addEventListener('click', ev=>{
+  if (ev.target.closest('#panel')) return;
+  const r = stageEl.getBoundingClientRect();
+  lastEvent = clock; queue = [];
+  target = Math.max(10, Math.min(ev.clientX - r.left - 105, stageEl.clientWidth - 210));
+});
+
+addEventListener('resize', seedGrains);
+seedGrains();
+play('idle');
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

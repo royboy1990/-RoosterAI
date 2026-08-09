@@ -3,6 +3,7 @@ import { Ga4PropertyPicker } from "@/app/_components/ga4-property-picker";
 import { GscSitePicker } from "@/app/_components/gsc-site-picker";
 import { SiteHealthOriginsEditor } from "@/app/_components/site-health-origins-editor";
 import { AudioPreferences } from "@/app/_components/audio-preferences";
+import { MascotPreferencesPanel } from "@/app/_components/mascot/mascot-preferences-panel";
 import { EstimatedSpendSection } from "@/app/_components/estimated-spend-section";
 import { PreferencesForm } from "@/app/_components/preferences-form";
 import {
@@ -476,6 +477,8 @@ export default async function SettingsPage() {
         ttsVoice={loaded.config.ttsVoice}
         operatorName={loaded.config.operatorName}
       />
+
+      <MascotPreferencesPanel />
 
       <EstimatedSpendSection summary={spendSummary} />
 
