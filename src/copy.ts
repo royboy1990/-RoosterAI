@@ -17,7 +17,7 @@ export const copy = {
     `${label} took too long and got left in the coop. (Timed out)`,
   skippedFailed: (label: string) =>
     `${label} is still sleeping in today. (Skipped)`,
-  emptyConnectorResult: "Nothing new here.",
+  emptyConnectorResult: "No fresh scratchings here.",
   demoMarker: "[DEMO]",
   demoBanner:
     "This brief was hatched in demo mode. Numbers and mail are canned — not your farm.",
@@ -31,7 +31,8 @@ export const copy = {
   nav: {
     latest: "Latest",
     history: "History",
-    ask: "Ask",
+    weeks: "Weeks",
+    ask: "Peck",
     coop: "Coop",
     settings: "Settings",
   },
@@ -74,20 +75,37 @@ export const copy = {
       `Nothing new since ${when}. Showing the last brief below.`,
     playBrief: "Play spoken brief",
     pauseBrief: "Pause spoken brief",
-    generateBrief: "Generate spoken brief",
-    generatingBrief: "Generating spoken brief…",
+    generateBrief: "Let Rooster read it",
+    generatingBrief: "Rooster is warming up…",
     briefAudioFailed: "Could not generate spoken brief.",
-    briefAudioReady: "Spoken brief ready.",
+    briefAudioReady: "Your morning crow is ready.",
     /** Prefix for muted cost line under the brief article. */
     costEstPrefix: "Est.",
     costLlmLabel: "LLM",
     costTtsLabel: "TTS",
   },
   history: {
-    title: "History",
-    empty: "No briefs in the archive yet.",
+    title: "Past Hatches",
+    empty: "No past hatches in the roost yet.",
     demoTag: "DEMO",
     unchangedTag: "UNCHANGED",
+  },
+  weeks: {
+    title: "Weekly Roost",
+    blurb: "A bird’s-eye view of patterns and loose ends.",
+    empty: "No weekly records yet. They hatch lazily after wakes once a week completes.",
+    demoTag: "DEMO",
+    backToArchive: "All weeks",
+  },
+  week: {
+    title: "Week",
+    emptyBody: "No weekly notes for this period.",
+    signalsHeading: "Signals",
+    carryHeading: "Still worth attention",
+    sourcesHeading: "Source briefs",
+    generationFailed: (error: string) =>
+      `Weekly generation failed: ${error}`,
+    notFound: "That week is not in the archive.",
   },
   brief: {
     title: "Brief",
@@ -99,25 +117,25 @@ export const copy = {
     hint: "Questions worth asking about this brief",
   },
   ask: {
-    heading: "Ask",
-    hint: "Peck a question or ask your own — answers use this brief and recent history.",
-    ownLabel: "Ask your own",
-    placeholder: "Ask about this brief…",
-    send: "Ask",
+    heading: "Peck the Brief",
+    hint: "Peck a question or ask your own — answers use this brief, recent days, and weekly memory.",
+    ownLabel: "Peck your own question",
+    placeholder: "Peck about this brief…",
+    send: "Peck",
     sending: "Pecking…",
     disabledStub:
       "Ask needs a real LLM key — stub and demo-only modes stay silent here.",
     disabledConfig: "Ask is turned off in config (askEnabled).",
-    recentHeading: "Recent chats",
-    recentEmpty: "No chats yet.",
-    chatsTitle: "Ask",
-    chatsBlurb: "Threads from pecks and follow-ups — reopen anytime.",
-    allChats: "All chats",
+    recentHeading: "Recent Peck Trails",
+    recentEmpty: "No peck trails yet.",
+    chatsTitle: "Peck Trails",
+    chatsBlurb: "Trails from pecks and follow-ups — reopen anytime.",
+    allChats: "All peck trails",
     basedOn: (labels: string) => `Based on ${labels}`,
-    newChat: "New question",
-    threadTitle: "Ask",
-    emptyThread: "No messages in this thread.",
-    continuePlaceholder: "Follow up…",
+    newChat: "New peck",
+    threadTitle: "Peck the Brief",
+    emptyThread: "No answers hatched in this trail yet.",
+    continuePlaceholder: "Keep pecking…",
     failed: "Ask failed.",
     backToBrief: "Back to brief",
   },
@@ -135,14 +153,14 @@ export const copy = {
       "That was a demo brief. Stock real sources below (or keep pecking the demo) so the dashboard stops bouncing you back here.",
     installedHeading: "Installed",
     installedEmpty: "Nothing installed yet — pick sources below.",
-    availableHeading: "Available",
+    availableHeading: "Ready to Roost",
     searchPlaceholder: "Search by name, description, or tag…",
-    noSearchMatches: "No available connectors match that search.",
+    noSearchMatches: "Nothing scratching around under that name.",
     availableEmpty: "Every catalog connector is already installed.",
-    install: "Install",
-    remove: "Remove",
-    mute: "Mute",
-    unmute: "Unmute",
+    install: "Add to Coop",
+    remove: "Remove from Coop",
+    mute: "Let Sleep",
+    unmute: "Wake Up",
     missingKeys: "Missing keys",
     setupLink: "How to get these keys",
     willNeed: "Needs",
@@ -153,16 +171,16 @@ export const copy = {
       active: "Active",
       muted: "Muted",
       needsKeys: "Needs keys",
-      available: "Available",
+      available: "Ready to Roost",
     },
     contribute:
       "Missing something? Write a connector or open an issue.",
     contributeDocs: "Custom connectors",
     contributeIssue: "Request a connector",
-    installed: (label: string) => `${label} installed.`,
-    removed: (label: string) => `${label} removed.`,
-    muted: (label: string) => `${label} muted.`,
-    unmuted: (label: string) => `${label} unmuted.`,
+    installed: (label: string) => `${label} joined the coop.`,
+    removed: (label: string) => `${label} left the coop.`,
+    muted: (label: string) => `${label} is sleeping in the coop.`,
+    unmuted: (label: string) => `${label} woke up.`,
     alreadyInstalled: "Already installed.",
     alreadyRemoved: "Already removed.",
     installFailed: "Could not install connector.",
@@ -194,13 +212,13 @@ export const copy = {
       n === 1 ? "1 source ready" : `${n} sources ready`,
     keysFoldAttention: (n: number) =>
       n === 1 ? "1 needs attention" : `${n} need attention`,
-    preferencesHeading: "Preferences",
+    preferencesHeading: "Roost Preferences",
     preferencesBlurb:
       "Model, delivery, timezone, and briefing prompts. Sources are stocked in the Coop. Saved to `rooster.config.json`.",
     audioHeading: "Audio",
     audioBlurb:
       "Wake crow, spoken brief, and Rooster FM defaults. Personal tracks stay in the dock.",
-    audioSaved: "Audio preference roosted.",
+    audioSaved: "Audio preferences tucked into the roost.",
     audioSaveFailed: "Could not save audio preference.",
     audioFoldSummary: (opts: {
       crow: boolean;
@@ -214,6 +232,32 @@ export const copy = {
       }
       const mode = opts.mode === "each-wake" ? "Each wake" : "On demand";
       return `${crow} · ${mode} · ${opts.voice}`;
+    },
+    mascotHeading: "Mascot",
+    mascotBlurb:
+      "Companion on the floor above the dock. Motion and tips stay on this browser — not in rooster.config.json.",
+    mascotShow: "Let the rooster roam",
+    mascotShowHint:
+      "Turn this off to send the companion back to the coop on every page. The /mascot lab still works for feel-testing.",
+    mascotMotion: "Motion",
+    mascotMotionFull: "Full",
+    mascotMotionReduced: "Reduced",
+    mascotMotionHint:
+      "Full keeps quiet ambient stroll. Reduced allows short Wake poses only.",
+    mascotTips: "Tips and reactions",
+    mascotTipsHint:
+      "Speech bubbles on Wake reactions. Poses still play when tips are off.",
+    mascotFoldSummary: (opts: {
+      show: boolean;
+      motion: "full" | "reduced";
+      tips: boolean;
+    }) => {
+      if (!opts.show) {
+        return "Back in the coop";
+      }
+      const motion = opts.motion === "full" ? "Full" : "Reduced";
+      const tips = opts.tips ? "Tips on" : "Tips off";
+      return `${motion} · ${tips}`;
     },
     spendHeading: "Estimated spend",
     spendBlurb:
@@ -284,7 +328,7 @@ export const copy = {
     promptHistoryEmpty: "No previous versions yet — they appear after you save a change.",
     promptHistoryLoad: "Load into editor",
     promptHistoryReset: "Reset system prompt to default",
-    save: "Save preferences",
+    save: "Roost these preferences",
     unsavedChanges: "Unsaved changes",
     saved: "Preferences roosted.",
     saveFailed: "Could not save preferences.",
@@ -300,6 +344,48 @@ export const copy = {
     failed: "Wake failed.",
     alreadyRunning:
       "A wake is already in progress — wait for it to finish.",
+  },
+  mascot: {
+    wakeSuccessTip: "Good haul this morning.",
+    wakeFailureTip: "Couldn't wake the flock.",
+    pokeLabel: "Rooster",
+    /** Click streak 1–2 — light acknowledge */
+    pokeAck: [
+      "Yes?",
+      "Hm.",
+      "I'm here.",
+      "Need something?",
+      "Peck received.",
+    ],
+    /** Click streak 3–4 — mild protest, still mostly professional */
+    pokeProtest: [
+      "Did you need a specific metric?",
+      "I'm updating the dashboard, you know.",
+      "Are we double-clicking, or just… clicking?",
+      "Is my beak smudged?",
+      "Careful, you're ruffling my cache.",
+      "Still here. Still a rooster.",
+      "Easy.",
+      "Working here.",
+    ],
+    /** Click streak 5–6 — veneer cracking */
+    pokeLouder: [
+      "Hey! Watch the feathers!",
+      "I have analytics to process!",
+      "Do I look like a cookie clicker to you?!",
+      "Stop pecking at me, that's my job!",
+      "My Coop Status is moving from Optimal to Irritated!",
+      "Are you trying to wake the flock manually?!",
+      "Back off.",
+      "COCK-A— no.",
+    ],
+    /** Click streak 7+ then cool-down — pick one punchline */
+    pokePunchlines: [
+      "I'm briefing, not a fidget toy.",
+      "Error 404: Patience not found.",
+      "I'm going back in the egg.",
+      "That's it. My bounce rate is 100% too.",
+    ],
   },
   roosterFm: {
     label: "Rooster FM",

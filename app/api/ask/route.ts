@@ -47,6 +47,7 @@ export async function POST(request: Request): Promise<Response> {
       ok: true,
       reply: result.reply,
       chatId: result.chatId,
+      sources: result.sources,
       sourceBriefIds: result.sourceBriefIds,
       reused: result.reused === true,
     });

@@ -115,3 +115,32 @@ export function SettingsSeoIcon({
     </svg>
   );
 }
+
+export function SettingsMascotIcon({
+  className,
+}: {
+  className?: string;
+}): ReactNode {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className={className ?? "size-4 shrink-0"}
+    >
+      <path
+        d="M4.5 12.5c1.2-2.2 2.1-3.4 4.2-3.4 1.6 0 2.8.9 3.3 2.2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="9.25" cy="6.25" r="2.6" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M11.4 5.4 13.5 4.6M7.2 3.4 8.1 1.75M5.1 5.6 3.35 4.85"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

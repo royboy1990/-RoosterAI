@@ -8,7 +8,7 @@ import {
 import type { LoadedConfig } from "../config";
 import { getLlmProvider } from "../llm";
 import { readBrief, readLatestBrief, resolveSubstantiveBrief } from "../store";
-import type { ChatRecord } from "../types";
+import type { ChatRecord, EvidenceRef } from "../types";
 import {
   askAbortSignal,
   isAskLlmAvailable,
@@ -16,8 +16,18 @@ import {
   makeAskRunContext,
   truncateAssistantReply,
 } from "./availability";
-import { buildContextBriefIds, loadContextBriefs } from "./context";
-import { ASK_SYSTEM_PROMPT, assembleAskEvidence } from "./evidence";
+import {
+  buildContextBriefIds,
+  buildContextWeeklyIds,
+  loadContextBriefs,
+  loadContextWeeks,
+} from "./context";
+import {
+  ASK_SYSTEM_PROMPT,
+  assembleAskEvidence,
+  parseAndStripSourcesMarker,
+  resolveMessageSources,
+} from "./evidence";
 
 export interface AskRequest {
   message: string;
@@ -30,6 +40,9 @@ export interface AskRequest {
 export interface AskResult {
   reply: string;
   chatId: string;
+  /** Prefer this over sourceBriefIds for new clients. */
+  sources: EvidenceRef[];
+  /** @deprecated brief-only view of sources for older API consumers */
   sourceBriefIds: string[];
   /** True when an existing Peck/thread was reopened without a new LLM call. */
   reused?: boolean;
@@ -43,28 +56,29 @@ function titleFromMessage(message: string): string {
   return `${oneLine.slice(0, 71).trimEnd()}…`;
 }
 
+function briefIdsFromSources(sources: EvidenceRef[]): string[] {
+  return sources.filter((s) => s.type === "brief").map((s) => s.id);
+}
+
 /**
- * Parse assistant output for cited brief ids that appear in the evidence set.
- * Falls back to the source brief when nothing explicit is found.
+ * Default provenance when the model omitted a valid marker:
+ * source brief if present, else first context brief.
  */
-export function extractCitedBriefIds(
-  reply: string,
+function defaultSources(
   contextBriefIds: string[],
+  contextWeeklyIds: string[],
   sourceBriefId?: string,
-): string[] {
-  const found: string[] = [];
-  for (const id of contextBriefIds) {
-    if (reply.includes(id) && !found.includes(id)) {
-      found.push(id);
-    }
-  }
-  if (found.length > 0) {
-    return found;
-  }
+): EvidenceRef[] {
   if (sourceBriefId && contextBriefIds.includes(sourceBriefId)) {
-    return [sourceBriefId];
+    return [{ type: "brief", id: sourceBriefId }];
   }
-  return contextBriefIds.slice(0, 1);
+  if (contextBriefIds[0]) {
+    return [{ type: "brief", id: contextBriefIds[0] }];
+  }
+  if (contextWeeklyIds[0]) {
+    return [{ type: "week", id: contextWeeklyIds[0] }];
+  }
+  return [];
 }
 
 async function resolveNewChatSource(input: {
@@ -90,7 +104,7 @@ async function resolveNewChatSource(input: {
 }
 
 /**
- * Create or continue an Ask thread with frozen contextBriefIds.
+ * Create or continue an Ask thread with frozen contextBriefIds + contextWeeklyIds.
  * Refuses stub/demo-only LLM answers.
  */
 export async function runAsk(
@@ -156,10 +170,14 @@ export async function runAsk(
         rootDir,
         `ask: reuse chat=${reused.id} source=${source.sourceBriefId}`,
       );
+      const sources = lastAssistant
+        ? resolveMessageSources(lastAssistant)
+        : [{ type: "brief" as const, id: source.sourceBriefId }];
       return {
         reply: lastAssistant?.content ?? "",
         chatId: reused.id,
-        sourceBriefIds: lastAssistant?.sourceBriefIds ?? [source.sourceBriefId],
+        sources,
+        sourceBriefIds: briefIdsFromSources(sources),
         reused: true,
       };
     }
@@ -174,6 +192,18 @@ export async function runAsk(
       throw new Error("Could not build Ask context from briefs.");
     }
 
+    const sourceBrief = await readBrief(rootDir, source.sourceBriefId);
+    const asOf = sourceBrief
+      ? new Date(sourceBrief.createdAt)
+      : new Date();
+    const contextWeeklyIds = await buildContextWeeklyIds({
+      rootDir,
+      demo: source.demo,
+      timezone: config.timezone,
+      asOf,
+      maxWeeks: config.chatContextWeeks,
+    });
+
     const now = new Date();
     chat = {
       id: toChatId(now),
@@ -182,6 +212,7 @@ export async function runAsk(
       demo: source.demo,
       sourceBriefId: source.sourceBriefId,
       contextBriefIds,
+      contextWeeklyIds,
       messages: [],
     };
   }
@@ -191,8 +222,14 @@ export async function runAsk(
     throw new Error("Frozen context briefs are missing from disk.");
   }
 
+  const weeks = await loadContextWeeks(
+    rootDir,
+    chat.contextWeeklyIds ?? [],
+  );
+
   const evidence = assembleAskEvidence({
     briefs,
+    weeks,
     sourceBriefId: chat.sourceBriefId,
     charBudget: config.askContextCharBudget,
   });
@@ -232,22 +269,58 @@ export async function runAsk(
   }
 
   reply = truncateAssistantReply(reply, config.askMaxAssistantChars);
-  const sourceBriefIds = extractCitedBriefIds(
-    reply,
-    chat.contextBriefIds,
-    chat.sourceBriefId,
-  );
+
+  const allowed: EvidenceRef[] = [
+    ...evidence.briefIds.map((id) => ({ type: "brief" as const, id })),
+    ...evidence.weeklyIds.map((id) => ({ type: "week" as const, id })),
+  ];
+  const parsed = parseAndStripSourcesMarker(reply, allowed);
+  const sources =
+    parsed.sources.length > 0
+      ? parsed.sources
+      : defaultSources(
+          chat.contextBriefIds,
+          chat.contextWeeklyIds ?? [],
+          chat.sourceBriefId,
+        );
+  reply = parsed.text;
+
+  const sourceBriefIds = briefIdsFromSources(sources);
 
   chat = {
     ...chat,
     messages: [
       ...chat.messages,
       { role: "user", content: message },
-      { role: "assistant", content: reply, sourceBriefIds },
+      {
+        role: "assistant",
+        content: reply,
+        sources,
+        sourceBriefIds,
+      },
     ],
   };
   chat = pruneChatMessages(chat, config.chatMaxStoredMessages);
   await writeChat(rootDir, chat);
 
-  return { reply, chatId: chat.id, sourceBriefIds };
+  return { reply, chatId: chat.id, sources, sourceBriefIds };
+}
+
+/** @deprecated kept for callers that still import the old helper name */
+export function extractCitedBriefIds(
+  reply: string,
+  contextBriefIds: string[],
+  sourceBriefId?: string,
+): string[] {
+  const allowed = contextBriefIds.map((id) => ({
+    type: "brief" as const,
+    id,
+  }));
+  const { sources } = parseAndStripSourcesMarker(reply, allowed);
+  if (sources.length > 0) {
+    return briefIdsFromSources(sources);
+  }
+  return briefIdsFromSources(
+    defaultSources(contextBriefIds, [], sourceBriefId),
+  );
 }

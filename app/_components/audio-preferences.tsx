@@ -89,8 +89,8 @@ export function AudioPreferences({
         mode: current.ttsMode,
         voice: current.ttsVoice,
       })}
-      defaultOpen
-      className="border-accent/25 bg-surface-raised/80"
+      defaultOpen={false}
+      className="border-border bg-surface/80"
     >
       <p className="text-sm text-muted">{copy.settings.audioBlurb}</p>
 

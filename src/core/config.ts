@@ -90,6 +90,16 @@ const roosterConfigSchema = z.object({
   askContextCharBudget: z.number().int().positive().default(24_000),
   /** Max messages kept per chat; older turns are pruned. */
   chatMaxStoredMessages: z.number().int().positive().default(40),
+  /** Lazy weekly memory generation after daily delivery. */
+  weeklyEnabled: z.boolean().default(true),
+  /** Entire weekly stage budget (all backfills share this AbortSignal). */
+  weeklyTimeoutMs: z.number().int().positive().default(30_000),
+  /** Cooldown hours after a failed weekly LLM/parse attempt. */
+  weeklyRetryHours: z.number().int().positive().default(24),
+  /** Successful weeklies frozen into a new Ask thread (max 12). */
+  chatContextWeeks: z.number().int().min(0).max(12).default(4),
+  /** Keep newest N successful weeks per demo/real lane. */
+  weeklyRetentionWeeks: z.number().int().min(1).max(52).default(12),
   /** Max characters kept per connector after sanitize. */
   perConnectorCharBudget: z.number().int().positive().default(4_000),
   /** Sparse — installed connectors only. Empty is a valid intermediate state. */

@@ -36,6 +36,7 @@ import {
   resolveLocation,
   type WeatherSnapshot,
 } from "./weather";
+import { maybeGenerateWeekly } from "./weekly/generate";
 
 function missingEnv(
   required: readonly string[],
@@ -238,7 +239,8 @@ async function stashWeatherSnapshot(
 }
 
 /**
- * Orchestration: gather → sanitize → summarize → persist → deliver.
+ * Orchestration: gather → sanitize → summarize → persist → deliver → weekly.
+ * Delivery failures are captured so weekly can still run; then rethrown.
  * No demo / dry-run branches — behavior comes from config + registries.
  */
 let activeRun: Promise<BriefRecord> | null = null;
@@ -485,6 +487,8 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
   const filePath = await writeBrief(rootDir, brief);
   log(`Persisted brief → ${filePath} · Coop Status: ${brief.status}`);
 
+  // Delivery first (capture failure), then weekly fail-soft, then rethrow.
+  let deliveryError: unknown;
   const deliveryCtx: RunContext = {
     ...ctx,
     signal: AbortSignal.any([
@@ -509,7 +513,18 @@ async function runPipelineInner(loaded: LoadedConfig): Promise<BriefRecord> {
     brief.deliveryError = message;
     await writeBrief(rootDir, brief);
     log(`Delivery failed (brief kept): ${message}`);
-    throw err;
+    deliveryError = err;
+  }
+
+  try {
+    await maybeGenerateWeekly({ loaded, now, ctx });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`weekly stage failed (wake continues): ${message}`);
+  }
+
+  if (deliveryError) {
+    throw deliveryError;
   }
 
   return brief;

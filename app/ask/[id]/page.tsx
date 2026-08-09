@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AskThread } from "@/app/_components/ask-thread";
-import { formatBriefDateTime } from "@/app/_lib/format";
+import { formatBriefDateTime, formatDayHeading } from "@/app/_lib/format";
 import { copy } from "@/src/copy";
 import { isAskLlmAvailable } from "@/src/core/ask/availability";
 import { readChat } from "@/src/core/chat-store";
 import { loadConfig, resolveRootDir } from "@/src/core/config";
 import { readBrief } from "@/src/core/store";
+import { readWeek } from "@/src/core/week-store";
 
 const CHAT_ID_RE = /^[A-Za-z0-9._-]+$/;
 
@@ -30,14 +31,21 @@ export default async function AskPage({
   const loaded = await loadConfig({ rootDir });
   const askAvailable = isAskLlmAvailable(loaded);
 
-  const briefLabels: Record<string, string> = {};
+  const sourceLabels: Record<string, string> = {};
   for (const briefId of chat.contextBriefIds) {
     const brief = await readBrief(rootDir, briefId);
     if (brief) {
-      briefLabels[briefId] = formatBriefDateTime(
-        brief.createdAt,
-        brief.timezone,
-      );
+      const label = formatBriefDateTime(brief.createdAt, brief.timezone);
+      sourceLabels[`brief:${briefId}`] = label;
+      sourceLabels[briefId] = label;
+    }
+  }
+  for (const weekId of chat.contextWeeklyIds ?? []) {
+    const week = await readWeek(rootDir, weekId);
+    if (week) {
+      const label = `Week of ${formatDayHeading(week.weekStart, week.timezone)}`;
+      sourceLabels[`week:${weekId}`] = label;
+      sourceLabels[weekId] = label;
     }
   }
 
@@ -68,7 +76,7 @@ export default async function AskPage({
       <AskThread
         chatId={chat.id}
         initialMessages={chat.messages}
-        briefLabels={briefLabels}
+        sourceLabels={sourceLabels}
         askAvailable={askAvailable}
       />
     </main>
