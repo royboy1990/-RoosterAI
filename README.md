@@ -102,7 +102,7 @@ npx tsx scripts/verify-weekly.ts
 ## Tier 0 — hatch a demo brief (no keys)
 
 ```bash
-git clone https://github.com/royboy1990/-RoosterAI
+git clone https://github.com/royboy1990/RoosterAI
 cd RoosterAI
 npm install
 npm run wake -- --demo
