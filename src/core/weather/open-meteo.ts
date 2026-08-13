@@ -10,6 +10,7 @@ interface GeocodeResult {
   longitude: number;
   country?: string;
   admin1?: string;
+  feature_code?: string;
 }
 
 interface GeocodeResponse {
@@ -30,9 +31,11 @@ interface ForecastResponse {
 
 type CacheEntry = {
   snapshot: WeatherSnapshot;
+  fetchedAt: number;
 };
 
-/** Per-process cache so connector + pipeline share one fetch per day-location. */
+/** Connector + header share one fetch; TTL so the sky can change during the day. */
+const MEMORY_TTL_MS = 15 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
 export function clearWeatherCache(): void {
@@ -70,12 +73,20 @@ function cityFromTimezone(timezone: string): string | null {
   return raw.replace(/_/g, " ");
 }
 
-/** Map WMO weather interpretation codes to a coarse condition. */
+/**
+ * Map WMO weather interpretation codes to a coarse condition.
+ * 0 Clear sky, 1 Mainly clear, 2 Partly cloudy, 3 Overcast.
+ * Codes 1–2 used to collapse into "cloudy", which made sunny tropical
+ * mornings look overcast.
+ */
 export function conditionFromWmo(code: number): WeatherCondition {
-  if (code === 0) {
+  if (code === 0 || code === 1) {
     return "clear";
   }
-  if (code >= 1 && code <= 3) {
+  if (code === 2) {
+    return "partlyCloudy";
+  }
+  if (code === 3) {
     return "cloudy";
   }
   if (code === 45 || code === 48) {
@@ -115,7 +126,7 @@ async function geocode(
 ): Promise<GeocodeResult> {
   const url = new URL(GEOCODE_URL);
   url.searchParams.set("name", locationQuery);
-  url.searchParams.set("count", "1");
+  url.searchParams.set("count", "5");
   url.searchParams.set("language", "en");
   url.searchParams.set("format", "json");
 
@@ -134,13 +145,60 @@ async function geocode(
     );
   }
   const body = (await res.json()) as GeocodeResponse;
-  const hit = body.results?.[0];
+  const hit = pickGeocodeResult(locationQuery, body.results);
   if (!hit) {
     throw new Error(
       `Weather location not found: "${locationQuery}". Set a city in Settings.`,
     );
   }
   return hit;
+}
+
+/**
+ * Prefer an inhabited place / island over airports, and a close name match
+ * over whatever GeoNames ranked first (e.g. "Koh Phangan" vs an airport).
+ */
+function pickGeocodeResult(
+  locationQuery: string,
+  results: GeocodeResult[] | undefined,
+): GeocodeResult | undefined {
+  if (!results || results.length === 0) {
+    return undefined;
+  }
+  const needle = normalizePlaceName(locationQuery);
+  const needleCompact = needle.replace(/\s+/g, "");
+  const scored = results.map((hit, index) => {
+    const name = normalizePlaceName(hit.name);
+    const nameCompact = name.replace(/\s+/g, "");
+    let score = 0;
+    if (name === needle || nameCompact === needleCompact) {
+      score += 80;
+    } else if (name.startsWith(needle) || needle.startsWith(name)) {
+      score += 50;
+    } else if (name.includes(needle) || needle.includes(name)) {
+      score += 30;
+    }
+    const feature = hit.feature_code ?? "";
+    if (feature === "PPLC" || feature === "PPLA" || feature === "PPLA2") {
+      score += 20;
+    } else if (feature === "PPL" || feature === "ISL") {
+      score += 16;
+    } else if (feature === "AIRP" || feature === "AIRF") {
+      score -= 40;
+    }
+    score -= index;
+    return { hit, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.hit;
+}
+
+function normalizePlaceName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 async function fetchForecast(
@@ -201,7 +259,7 @@ export interface FetchWeatherOptions {
   now?: Date;
   signal?: AbortSignal;
   /**
-   * Extra fetch init (e.g. `{ next: { revalidate: 1800 } }` for RSC).
+   * Extra fetch init (e.g. `{ next: { revalidate: 900 } }` for RSC).
    * Merged into geocode + forecast requests.
    */
   fetchInit?: RequestInit;
@@ -210,8 +268,8 @@ export interface FetchWeatherOptions {
 }
 
 /**
- * Geocode + current/daily forecast. Cached in-process by `location:YYYY-MM-DD`.
- * Errors throw with a clear message; callers decide fail-soft.
+ * Geocode + current/daily forecast. Cached in-process by `location:YYYY-MM-DD`
+ * for 15 minutes so a wake can reuse the header fetch without going stale all day.
  */
 export async function fetchWeatherSnapshot(
   options: FetchWeatherOptions,
@@ -229,7 +287,7 @@ export async function fetchWeatherSnapshot(
 
   if (!options.bypassMemoryCache) {
     const hit = cache.get(key);
-    if (hit) {
+    if (hit && Date.now() - hit.fetchedAt < MEMORY_TTL_MS) {
       return hit.snapshot;
     }
   }
@@ -247,7 +305,7 @@ export async function fetchWeatherSnapshot(
   );
 
   if (!options.bypassMemoryCache) {
-    cache.set(key, { snapshot });
+    cache.set(key, { snapshot, fetchedAt: Date.now() });
   }
   return snapshot;
 }
@@ -257,6 +315,8 @@ export function conditionLabel(condition: WeatherCondition): string {
   switch (condition) {
     case "clear":
       return "Clear sky";
+    case "partlyCloudy":
+      return "Partly cloudy";
     case "cloudy":
       return "Cloudy";
     case "rain":
@@ -278,6 +338,8 @@ export function conditionAdjective(
   switch (condition) {
     case "clear":
       return isDay ? "Sunny" : "Clear";
+    case "partlyCloudy":
+      return "Partly cloudy";
     case "cloudy":
       return "Cloudy";
     case "rain":
@@ -304,6 +366,8 @@ export function conditionGlyph(
   switch (condition) {
     case "clear":
       return isDay ? "sun" : "moon";
+    case "partlyCloudy":
+      return "sun-cloud";
     case "cloudy":
       return "cloud";
     case "rain":
@@ -371,6 +435,9 @@ export function weatherIconColor(
     case "clear":
       base = isDay ? [240, 168, 56] : [198, 208, 222];
       break;
+    case "partlyCloudy":
+      base = isDay ? [220, 168, 72] : [176, 184, 202];
+      break;
     case "cloudy":
       base = [150, 160, 178];
       break;
@@ -403,7 +470,7 @@ export function formatWeatherBriefLine(snapshot: WeatherSnapshot): string {
 }
 
 /**
- * Server/layout helper: resolve location, fetch with Next data cache (30 min),
+ * Server/layout helper: resolve location, fetch with Next data cache (15 min),
  * fail-soft to null so the header stays pixel-identical when weather is unavailable.
  */
 export async function loadHeaderWeather(options: {
@@ -424,8 +491,8 @@ export async function loadHeaderWeather(options: {
       timezone: options.timezone,
       now: options.now,
       fetchInit: {
-        // Next.js Data Cache — header weather at most ~30 min stale.
-        next: { revalidate: 1800 },
+        // Next.js Data Cache — header weather at most ~15 min stale.
+        next: { revalidate: 900 },
       } as RequestInit,
     });
   } catch {

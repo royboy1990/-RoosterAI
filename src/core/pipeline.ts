@@ -193,7 +193,7 @@ async function gatherConnectors(
 
 /**
  * After a successful weather connector gather, re-read the snapshot from the
- * shared day cache (no second network call). Fail-soft — never fails the wake.
+ * shared short-TTL cache (no second network call). Fail-soft — never fails the wake.
  */
 async function stashWeatherSnapshot(
   loaded: LoadedConfig,

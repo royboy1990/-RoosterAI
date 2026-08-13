@@ -28,6 +28,14 @@ const TEMPLATES: readonly Template[] = [
     line: "Clear skies over {location} — {temp} degrees right now.",
   },
   {
+    conditions: ["partlyCloudy"],
+    line: "Sun and clouds in {location} today, {temp} degrees.",
+  },
+  {
+    conditions: ["partlyCloudy"],
+    line: "It's a bright, partly cloudy day in {location}, {temp} degrees.",
+  },
+  {
     conditions: ["cloudy"],
     line: "It's cloudy in {location} today, {temp} degrees.",
   },

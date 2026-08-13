@@ -297,6 +297,10 @@ header[data-weather="1"] .site-header-nav a:hover {
 }
 
 /* Header weather backdrop — low-contrast; keep nav/mono legible. */
+.header-weather {
+  /* Own compositor layer so sticky scroll doesn't flash the page black. */
+  transform: translateZ(0);
+}
 @keyframes header-weather-sun-spin {
   from {
     transform: rotate(0deg);
@@ -427,7 +431,6 @@ header[data-weather="1"] .site-header-nav a:hover {
   background-repeat: repeat-x;
   /* Same idea as the gestok pen: natural aspect, not flattened to header height. */
   background-size: auto 240%;
-  will-change: background-position;
 }
 
 .header-weather-parallax-a {
@@ -452,6 +455,22 @@ header[data-weather="1"] .site-header-nav a:hover {
 }
 
 /* Condition mood on the existing data-condition root — filter the strips only. */
+.header-weather[data-condition="partlyCloudy"] .header-weather-parallax {
+  filter: brightness(1.08) saturate(1.04);
+}
+
+.header-weather[data-condition="partlyCloudy"] .header-weather-parallax-a {
+  opacity: 0.72;
+}
+
+.header-weather[data-condition="partlyCloudy"] .header-weather-parallax-b {
+  opacity: 0.58;
+}
+
+.header-weather[data-condition="partlyCloudy"] .header-weather-parallax-c {
+  opacity: 0.5;
+}
+
 .header-weather[data-condition="fog"] .header-weather-parallax {
   filter: blur(1.5px) contrast(0.88) brightness(1.06);
 }
