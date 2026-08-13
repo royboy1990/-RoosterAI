@@ -53,8 +53,9 @@ export function SiteHeader({
   const weatherTitle = weather ? weatherHoverTitle(weather) : null;
 
   return (
+    // isolate + opaque bg: sticky weather + mix-blend-screen used to flash the page black on scroll.
     <header
-      className="relative sticky top-0 z-30 overflow-hidden border-b border-border"
+      className="relative sticky top-0 z-30 isolate border-b border-border bg-background"
       data-weather={weather ? "1" : "0"}
     >
       <HeaderWeatherBackdrop weather={weather ?? null} />
@@ -113,6 +114,9 @@ export function SiteHeader({
                       </span>
                     </Tooltip>
                     <span>{weather.tempC}</span>
+                    <span className="max-w-[9.5rem] truncate">
+                      {weather.locationName}
+                    </span>
                   </span>
                 </>
               ) : null}

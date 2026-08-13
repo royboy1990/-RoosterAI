@@ -48,7 +48,9 @@ export function HeaderWeatherBackdrop({
         />
       ) : null}
       {condition === "clear" && isDay ? <SunBloom /> : null}
+      {condition === "partlyCloudy" && isDay ? <SunBloom /> : null}
       {condition === "clear" && !isDay ? <NightSky /> : null}
+      {condition === "partlyCloudy" && !isDay ? <NightSky /> : null}
       {PARALLAX_CLOUD_CONDITIONS.has(condition) ? <ParallaxClouds /> : null}
       {condition === "rain" || condition === "storm" ? (
         <HeaderRain storm={condition === "storm"} />
@@ -83,6 +85,8 @@ export function WeatherConditionIcon({
     >
       {condition === "clear" && isDay ? <SunPaths /> : null}
       {condition === "clear" && !isDay ? <MoonPaths /> : null}
+      {condition === "partlyCloudy" && isDay ? <SunCloudPaths /> : null}
+      {condition === "partlyCloudy" && !isDay ? <MoonCloudPaths /> : null}
       {condition === "cloudy" ? <CloudPaths /> : null}
       {condition === "rain" ? <CloudRainPaths /> : null}
       {condition === "snow" ? <SnowflakePaths /> : null}
@@ -138,6 +142,16 @@ function backdropTone(
         : "radial-gradient(ellipse 50% 48% at 80% 5%, rgba(90,110,150,0.28) 0%, transparent 70%)",
     };
   }
+  if (condition === "partlyCloudy") {
+    return {
+      gradient: isDay
+        ? "linear-gradient(155deg, rgba(72,50,22,0.88) 0%, rgba(40,34,24,0.55) 45%, rgba(18,18,18,0.18) 100%)"
+        : "linear-gradient(168deg, rgba(24,30,52,0.94) 0%, rgba(20,24,40,0.62) 48%, rgba(18,18,18,0.22) 100%)",
+      bloom: isDay
+        ? "radial-gradient(ellipse 58% 72% at 90% 0%, rgba(240,160,48,0.5) 0%, rgba(240,140,40,0.22) 32%, transparent 68%)"
+        : "radial-gradient(ellipse 48% 55% at 84% 8%, rgba(200,210,230,0.28) 0%, rgba(100,120,180,0.14) 38%, transparent 70%)",
+    };
+  }
   // clear
   if (isDay) {
     return {
@@ -178,6 +192,7 @@ function NightSky() {
 }
 
 const PARALLAX_CLOUD_CONDITIONS = new Set<WeatherCondition>([
+  "partlyCloudy",
   "cloudy",
   "fog",
   "rain",
@@ -430,6 +445,39 @@ function CloudPaths() {
       d="M4.8 11.5h7.2a2.6 2.6 0 0 0 .2-5.2 3.4 3.4 0 0 0-6.5-1.1A2.5 2.5 0 0 0 4.8 11.5Z"
       fill="currentColor"
     />
+  );
+}
+
+function SunCloudPaths() {
+  return (
+    <>
+      <circle cx="11" cy="5" r="1.7" fill="currentColor" />
+      <path
+        d="M11 1.7v.9M14.3 5h.9M13.4 2.6l-.6.6M13.4 7.4l-.6-.6"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M3.8 12.4h8a2.5 2.5 0 0 0 .18-5 3.2 3.2 0 0 0-6.15-1.05A2.35 2.35 0 0 0 3.8 12.4Z"
+        fill="currentColor"
+      />
+    </>
+  );
+}
+
+function MoonCloudPaths() {
+  return (
+    <>
+      <path
+        d="M11.4 2.6A3.8 3.8 0 1 0 13.6 7.4 3 3 0 0 1 11.4 2.6Z"
+        fill="currentColor"
+      />
+      <path
+        d="M3.8 12.6h8a2.5 2.5 0 0 0 .18-5 3.2 3.2 0 0 0-6.15-1.05A2.35 2.35 0 0 0 3.8 12.6Z"
+        fill="currentColor"
+      />
+    </>
   );
 }
 

@@ -1,6 +1,7 @@
 /** Coarse condition bucket for brief copy, TTS, and header backdrop. */
 export type WeatherCondition =
   | "clear"
+  | "partlyCloudy"
   | "cloudy"
   | "rain"
   | "snow"
